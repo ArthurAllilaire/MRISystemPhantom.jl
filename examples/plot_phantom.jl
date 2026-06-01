@@ -67,7 +67,29 @@ p_fid = plot_phantom_map(slab(obj_fid, 0.0; halfthick_mm = 5.5), :T1;
                          view_2d = true, height = 650, max_spins = 150_000)
 save_html(p_fid, "fiducials_z0_slice.html")
 
-# ---------- 4. augmented full phantom ------------------------------------
+# ---------- 4. vertical slice through all three contrast plates ----------
+# Instead of an axial slab (one plate), take a thin VERTICAL slab centred at
+# the origin whose plane is spanned by the x and z axes (normal along y). The
+# plates are stacked in z (PLATE_Z_MM = T1 56.5, T2 16.5, PD −23.5 mm), so this
+# cut passes through the central sphere of each — T1, T2 and PD visible at once.
+# With y collapsed, plot_phantom_map renders the x–z plane automatically.
+cfg_vert = PhantomConfig(
+    field              = :T3,
+    voxel_size_mm      = 1.0,
+    include_plates     = [:T1, :T2, :PD, :water],
+    slice_thickness_mm = 1.0,
+    slice_center_mm    = (0.0, 0.0, 0.0),
+    slice_normal       = (0.0, 1.0, 0.0),   # plane spanned by x and z
+)
+obj_vert = build_phantom(cfg_vert)
+@info "Vertical slice" spins = length(obj_vert.x)
+for prop in (:T1, :T2, :ρ)
+    p_vert = plot_phantom_map(obj_vert, prop;
+                              view_2d = false, height = 650, max_spins = 150_000)
+    save_html(p_vert, "vertical_slice_$(prop)_3T.html")
+end
+
+# ---------- 5. augmented full phantom ------------------------------------
 cfg_aug = PhantomConfig(
     field          = :T3,
     voxel_size_mm  = 1.5,
