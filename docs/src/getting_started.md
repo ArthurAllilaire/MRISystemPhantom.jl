@@ -4,7 +4,7 @@
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/arthuraa/MRISystemPhantom.jl")
+Pkg.add(url = "https://github.com/ArthurAllilaire/MRISystemPhantom.jl")
 ```
 
 The package depends on [KomaMRI.jl](https://github.com/JuliaHealth/KomaMRI.jl)

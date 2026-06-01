@@ -50,13 +50,13 @@ This package is not yet registered. Add it directly from GitHub:
 
 ```julia
 using Pkg
-Pkg.add(url = "https://github.com/arthuraa/MRISystemPhantom.jl")
+Pkg.add(url = "https://github.com/ArthurAllilaire/MRISystemPhantom.jl")
 ```
 
 Or, in the Julia REPL package mode (`]`):
 
 ```
-pkg> add https://github.com/arthuraa/MRISystemPhantom.jl
+pkg> add https://github.com/ArthurAllilaire/MRISystemPhantom.jl
 ```
 
 ## Navigation
