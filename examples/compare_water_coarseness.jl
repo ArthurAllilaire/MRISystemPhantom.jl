@@ -135,86 +135,126 @@ for (lbl, img, _ksp_log, _ksp, _n, _tμ, _tσ) in results[2:end]
 end
 println()
 
-# Build the column list: raw columns first, then one diff column per non-ref.
-# Each column is a NamedTuple with separate image / k-space titles + colorscales.
-columns = NamedTuple[]
-for (lbl, img, ksp_log, _cplx, nspins, tμ, _tσ) in results
-    push!(columns, (img_title = "$(lbl)<br>$(nspins) spins · $(round(tμ, digits = 1)) s",
-                    img_z = img, img_cs = "Greys",
-                    ksp_title = "k-space (log|·|)", ksp_z = ksp_log, ksp_cs = "Viridis",
-                    is_diff = false))
-end
-for (lbl, img, ksp_log, _cplx, _n, _tμ, _tσ) in results[2:end]
-    push!(columns, (img_title = "Difference (fine − coarse)",
-                    img_z = ref_img .- img, img_cs = "RdBu",
-                    ksp_title = "k-space difference",
-                    ksp_z = ref_ksp .- ksp_log, ksp_cs = "RdBu",
-                    is_diff = true))
-end
+# --- Does k-space apodisation (Hamming) reduce the coarse-vs-fine error? ----
+# The coarse-grid discrepancy is Gibbs side-lobe leakage from the blockier water
+# edges. A Hamming window suppresses those side-lobes (−13 → −43 dB), so if the
+# diagnosis is right it should shrink the coarse-vs-fine ROI NRMSE — at the cost
+# of resolution. Reconstruct both grids with and without the window (identical
+# recon applied to each) and compare. NRMSE is normalised, so the window's DC
+# attenuation cancels and only the tracking error remains.
+roi_nrmse(a_img, b_img, r) =
+    let a = [roi_mean(a_img, p...; r = r) for p in px],
+        b = [roi_mean(b_img, p...; r = r) for p in px]
+        sqrt(mean(abs2, b .- a)) / sqrt(mean(abs2, a))
+    end
 
-# 2 rows (image / k-space) × ncols (raw configs + diffs).
-n = length(columns)
+ref_img_h = kspace_to_image(results[1][4]; hamming = true)
+@printf("ROI NRMSE — plain vs Hamming-apodised recon (coarse vs fine)\n")
+@printf("%-22s  %4s  %9s  %9s\n", "config", "r", "plain", "hamming")
+for (lbl, img, _ksp_log, ksp_c, _n, _tμ, _tσ) in results[2:end]
+    img_h = kspace_to_image(ksp_c; hamming = true)
+    for r in ROI_RADII
+        @printf("%-22s  %4d  %8.2f%%  %8.2f%%\n", lbl, r,
+                100 * roi_nrmse(ref_img, img, r),
+                100 * roi_nrmse(ref_img_h, img_h, r))
+    end
+end
+println()
+
 const HS = 0.12   # horizontal spacing (fraction) — leaves room for colorbars
 const VS = 0.14   # vertical spacing
-fig = PlotlyJS.make_subplots(
-    rows = 2, cols = n,
-    subplot_titles = reshape(
-        vcat([c.img_title for c in columns],
-             [c.ksp_title for c in columns]),
-        1, :),
-    horizontal_spacing = HS, vertical_spacing = VS)
 
-# Subplot domain geometry (matches make_subplots' equal-column layout) so each
-# colorbar sits just right of its own panel rather than stacking at the figure edge.
-colw = (1 - HS * (n - 1)) / n
-rowh = (1 - VS) / 2
-col_x1(j) = (j - 1) * (colw + HS) + colw          # right edge of column j
-row_yc(row) = row == 1 ? rowh + VS + rowh / 2 : rowh / 2
-
-function colorbar(j, row)
-    Dict(:x => col_x1(j) + 0.012, :xanchor => "left",
-         :y => row_yc(row), :yanchor => "middle",
-         :len => rowh, :thickness => 10)
+# Reconstruct one config's image + k-space for display under a chosen recon.
+# With Hamming we show the *windowed* k-space (what the IFFT actually sees), so
+# the apodisation is visible in both rows.
+function recon_for_display(ksp_c; hamming::Bool)
+    img = kspace_to_image(ksp_c; hamming = hamming)
+    wk  = hamming ? ksp_c .* hamming_window_2d(size(ksp_c)...) : ksp_c
+    img, log10.(abs.(wk) .+ eps(Float32))
 end
 
-for (j, c) in enumerate(columns)
-    # Diff heatmaps use a diverging scale centred at zero so 0 = white.
-    extra = c.is_diff ? (; zmid = 0) : (;)
-    PlotlyJS.add_trace!(fig,
-        PlotlyJS.heatmap(; z = c.img_z, colorscale = c.img_cs,
-                         showscale = true, colorbar = colorbar(j, 1), extra...),
-        row = 1, col = j)
-    PlotlyJS.add_trace!(fig,
-        PlotlyJS.heatmap(; z = c.ksp_z, colorscale = c.ksp_cs,
-                         showscale = true, colorbar = colorbar(j, 2), extra...),
-        row = 2, col = j)
+# Build the fine | coarse | difference figure for a given reconstruction and
+# write it to OUT/outfile. Same 3-column layout for plain and Hamming so the two
+# figures' difference columns are directly comparable.
+function build_figure(; hamming::Bool, suptitle::AbstractString, outfile::AbstractString)
+    ref_img, ref_ksp = recon_for_display(results[1][4]; hamming)
+    ksp_lbl = hamming ? "k-space ×Hamming (log|·|)" : "k-space (log|·|)"
+
+    columns = NamedTuple[]
+    for (lbl, _img, _kl, ksp_c, nspins, tμ, _tσ) in results
+        img, ksp_log = recon_for_display(ksp_c; hamming)
+        push!(columns, (img_title = "$(lbl)<br>$(nspins) spins · $(round(tμ, digits = 1)) s",
+                        img_z = img, img_cs = "Greys",
+                        ksp_title = ksp_lbl, ksp_z = ksp_log, ksp_cs = "Viridis",
+                        is_diff = false))
+    end
+    for (_lbl, _img, _kl, ksp_c, _n, _tμ, _tσ) in results[2:end]
+        img, ksp_log = recon_for_display(ksp_c; hamming)
+        push!(columns, (img_title = "Difference (fine − coarse)",
+                        img_z = ref_img .- img, img_cs = "RdBu",
+                        ksp_title = "k-space difference",
+                        ksp_z = ref_ksp .- ksp_log, ksp_cs = "RdBu",
+                        is_diff = true))
+    end
+
+    n = length(columns)
+    fig = PlotlyJS.make_subplots(
+        rows = 2, cols = n,
+        subplot_titles = reshape(
+            vcat([c.img_title for c in columns], [c.ksp_title for c in columns]), 1, :),
+        horizontal_spacing = HS, vertical_spacing = VS)
+
+    # Subplot domain geometry (matches make_subplots' equal-column layout) so each
+    # colorbar sits just right of its own panel rather than at the figure edge.
+    colw = (1 - HS * (n - 1)) / n
+    rowh = (1 - VS) / 2
+    col_x1(j) = (j - 1) * (colw + HS) + colw
+    row_yc(row) = row == 1 ? rowh + VS + rowh / 2 : rowh / 2
+    colorbar(j, row) = Dict(:x => col_x1(j) + 0.012, :xanchor => "left",
+                            :y => row_yc(row), :yanchor => "middle",
+                            :len => rowh, :thickness => 10)
+
+    for (j, c) in enumerate(columns)
+        extra = c.is_diff ? (; zmid = 0) : (;)   # diverging diff scale, white = 0
+        PlotlyJS.add_trace!(fig,
+            PlotlyJS.heatmap(; z = c.img_z, colorscale = c.img_cs,
+                             showscale = true, colorbar = colorbar(j, 1), extra...),
+            row = 1, col = j)
+        PlotlyJS.add_trace!(fig,
+            PlotlyJS.heatmap(; z = c.ksp_z, colorscale = c.ksp_cs,
+                             showscale = true, colorbar = colorbar(j, 2), extra...),
+            row = 2, col = j)
+    end
+
+    PlotlyJS.relayout!(fig; height = 780, width = 380 * n,
+        margin = Dict(:t => 90, :l => 70, :r => 80, :b => 60),
+        title = Dict(:text => suptitle, :x => 0.5, :xanchor => "center",
+                     :y => 0.98, :yanchor => "top", :font => Dict(:size => 18)))
+    for ann in fig.plot.layout.annotations
+        ann[:font] = Dict(:size => 12)   # clear the figure title
+    end
+    # Square physical FOV (z is Npe×Nfe ⇒ scaleratio = Nfe/Npe) + axis labels.
+    for k in 1:2n
+        row    = k <= n ? 1 : 2
+        ya     = k == 1 ? "yaxis" : "yaxis$k"
+        xa     = k == 1 ? "xaxis" : "xaxis$k"
+        anchor = k == 1 ? "x" : "x$k"
+        xtitle = row == 1 ? "freq-encode [px]" : "kx [px]"
+        ytitle = row == 1 ? "phase-encode [px]" : "ky [px]"
+        PlotlyJS.relayout!(fig;
+            Symbol(ya) => Dict(:scaleanchor => anchor, :scaleratio => Nfe / Npe,
+                               :title => Dict(:text => ytitle)),
+            Symbol(xa) => Dict(:title => Dict(:text => xtitle)))
+    end
+
+    out_path = joinpath(OUT, outfile)
+    PlotlyJS.savefig(fig, out_path; format = "html")
+    @info "Saved" path = out_path
 end
 
-PlotlyJS.relayout!(fig; height = 780, width = 380 * n,
-    margin = Dict(:t => 90, :l => 70, :r => 80, :b => 60),
-    title = Dict(:text => "Simulation fidelity vs cost: background-water voxelisation (IR-SE-2D)",
-                 :x => 0.5, :xanchor => "center", :y => 0.98, :yanchor => "top",
-                 :font => Dict(:size => 18)))
-# Shrink subplot-title font so the two-line headers clear the figure title.
-for ann in fig.plot.layout.annotations
-    ann[:font] = Dict(:size => 12)
-end
-# Square physical FOV + axis labels (row 1 = image, row 2 = k-space). z is
-# Npe×Nfe, so y spans Npe units and x spans Nfe units; scaleratio = Nfe/Npe
-# makes the box square even when the matrix is anisotropic (e.g. 32×64).
-for k in 1:2n
-    row    = k <= n ? 1 : 2
-    ya     = k == 1 ? "yaxis" : "yaxis$k"
-    xa     = k == 1 ? "xaxis" : "xaxis$k"
-    anchor = k == 1 ? "x" : "x$k"
-    xtitle = row == 1 ? "freq-encode [px]" : "kx [px]"
-    ytitle = row == 1 ? "phase-encode [px]" : "ky [px]"
-    PlotlyJS.relayout!(fig;
-        Symbol(ya) => Dict(:scaleanchor => anchor, :scaleratio => Nfe / Npe,
-                           :title => Dict(:text => ytitle)),
-        Symbol(xa) => Dict(:title => Dict(:text => xtitle)))
-end
-
-out_path = joinpath(OUT, "water_coarseness_compare.html")
-PlotlyJS.savefig(fig, out_path; format = "html")
-@info "Saved" path = out_path
+build_figure(hamming = false,
+    suptitle = "Simulation fidelity vs cost: background-water voxelisation (IR-SE-2D)",
+    outfile  = "water_coarseness_compare.html")
+build_figure(hamming = true,
+    suptitle = "Same comparison, Hamming-apodised reconstruction (IR-SE-2D)",
+    outfile  = "water_coarseness_compare_hamming.html")

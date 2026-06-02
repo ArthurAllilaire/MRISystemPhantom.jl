@@ -47,6 +47,12 @@ Base.@kwdef struct PhantomConfig
     custom_sphere_descriptors::Vector{SphereDescriptor} = SphereDescriptor[]
     # Optional water-only voxel size. When provided, background water uses this
     # spacing and spin ρ is reweighted to conserve total water signal.
+    # NOTE: coarsening the water (this > voxel_size_mm) blockifies the water
+    # edges and adds Gibbs ringing near sphere boundaries. Reconstructing with a
+    # Hamming window — `kspace_to_image(...; hamming = true)` — largely removes
+    # it (most effective for single-pixel/edge ROIs, modest for 3×3-averaged
+    # ROIs) at the cost of some spatial resolution. See
+    # examples/compare_water_coarseness.jl.
     water_voxel_size_mm::Union{Nothing,Float64} = nothing
     # Optional through-plane spacing for sliced water plane stacks. When
     # nothing, a sliced water slab is represented by one weighted centre plane.

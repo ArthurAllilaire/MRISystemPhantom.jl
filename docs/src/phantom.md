@@ -51,7 +51,17 @@ cfg = PhantomConfig(
 ```
 
 The water layer can use a coarser voxel grid (`water_voxel_size_mm`) to reduce
-spin count without affecting the contrast spheres.
+spin count without affecting the contrast spheres. The spin density is reweighted
+so the total water signal (and the k-space DC) is conserved.
+
+!!! note "Coarse water: prefer a Hamming window at reconstruction"
+    Coarsening the water (`water_voxel_size_mm > voxel_size_mm`) blockifies the
+    water edges, which adds Gibbs ringing near the sphere boundaries. Reconstruct
+    with a Hamming window — [`kspace_to_image`](@ref)`(...; hamming = true)` — to
+    largely remove it. The benefit is largest for single-pixel / edge ROIs and
+    modest for 3×3-averaged ROIs, and it costs some spatial resolution (wider
+    main lobe). The trade-off is quantified end-to-end in
+    `examples/compare_water_coarseness.jl`.
 
 ## Domain randomisation (augmentation)
 
