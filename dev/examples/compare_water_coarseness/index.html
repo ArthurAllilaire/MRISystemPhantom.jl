@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Water Coarseness · MRISystemPhantom.jl</title><meta name="title" content="Water Coarseness · MRISystemPhantom.jl"/><meta property="og:title" content="Water Coarseness · MRISystemPhantom.jl"/><meta property="twitter:title" content="Water Coarseness · MRISystemPhantom.jl"/><meta name="description" content="Documentation for MRISystemPhantom.jl."/><meta property="og:description" content="Documentation for MRISystemPhantom.jl."/><meta property="twitter:description" content="Documentation for MRISystemPhantom.jl."/><meta property="og:url" content="https://arthurallilaire.github.io/MRISystemPhantom.jl/examples/compare_water_coarseness/"/><meta property="twitter:url" content="https://arthurallilaire.github.io/MRISystemPhantom.jl/examples/compare_water_coarseness/"/><link rel="canonical" href="https://arthurallilaire.github.io/MRISystemPhantom.jl/examples/compare_water_coarseness/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">MRISystemPhantom.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><span class="tocitem">Guides</span><ul><li><a class="tocitem" href="../../phantom/">Phantom Construction</a></li><li><a class="tocitem" href="../../sequences/">Pulse Sequences</a></li><li><a class="tocitem" href="../../fitting/">Parameter Fitting</a></li><li><a class="tocitem" href="../../diagnostics/">SNR Diagnostics</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><a class="tocitem" href="../conventional_baseline/">Conventional Baseline</a></li><li><a class="tocitem" href="../t1_mapping/">T1 Mapping</a></li><li><a class="tocitem" href="../snr_calibration/">SNR Calibration</a></li><li class="is-active"><a class="tocitem" href>Water Coarseness</a></li></ul></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Water Coarseness</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Water Coarseness</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ArthurAllilaire/MRISystemPhantom.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ArthurAllilaire/MRISystemPhantom.jl/blob/main/docs/src/examples/compare_water_coarseness.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Water-Coarseness-Comparison"><a class="docs-heading-anchor" href="#Water-Coarseness-Comparison">Water-Coarseness Comparison</a><a id="Water-Coarseness-Comparison-1"></a><a class="docs-heading-anchor-permalink" href="#Water-Coarseness-Comparison" title="Permalink"></a></h1><p>Compare reconstructed magnitude image and k-space across water-voxel coarseness for ONE sequence (IR-SE-2D). The only knob that changes between columns is <code>water_voxel_size_mm</code>:</p><pre><code class="nohighlight hljs">nothing  → water at the sphere voxel size  (≡ &quot;full&quot;  / &quot;cached&quot;)
+3.0      → coarse 3 mm water               (≡ &quot;full3&quot; / &quot;cached3&quot;)</code></pre><p>Same phantom geometry otherwise, same Bloch simulation through the same sequence and scanner, so any difference you see in image/k-space is purely the water voxelisation. Edit <code>WATER_VOXELS</code> to add/remove columns, or swap the <code>seq = ...</code> line to compare a different sequence.</p><p>Writes one interactive Plotly HTML to src/assets/.</p><p>Run with:  julia –project=. examples/compare<em>water</em>coarseness.jl</p><pre><code class="language-julia hljs">using MRISystemPhantom, KomaMRI, Printf, Statistics
+
+const PlotlyJS = parentmodule(typeof(plot_phantom_map(
+    Phantom(x = [0.0]), :T1; height = 10)))
+
+const OUT = joinpath(@__DIR__, &quot;..&quot;, &quot;src&quot;, &quot;assets&quot;)
+isdir(OUT) || mkpath(OUT)</code></pre><p>–– knobs you&#39;ll usually touch –––––––––––––––––––––</p><pre><code class="language-julia hljs">const FIELD     = :T15
+const VOXEL_MM  = 1.0          # sphere voxel size (held fixed)
+const FOV       = 0.2          # [m]
+const Nfe       = 64
+const Npe       = 32
+const NREPS     = 20           # timed simulate() repeats (after a warm-up) for mean±std</code></pre><p>water<em>voxel</em>size_mm =&gt; display label. <code>nothing</code> = water at the sphere voxel size; a number = coarser water grid (fewer spins, cheaper to simulate). The first entry is the high-fidelity reference; the rest are cheaper approximations.</p><pre><code class="language-julia hljs">const WATER_VOXELS = [
+    nothing =&gt; &quot;Fine water (1 mm)&quot;,
+    3.0     =&gt; &quot;Coarse water (3 mm)&quot;,
+]</code></pre><p>One sequence, reused for every column. Change this to compare another seq.</p><pre><code class="language-julia hljs">seq = ir_se_2d_sequence(0.4, 0.08, 1.5;
+    FOV = FOV, Nfe = Nfe, Npe = Npe)</code></pre><hr/><p>Simulate one phantom and return (magnitude image, log-magnitude k-space).</p><pre><code class="language-julia hljs">function recon(water_vox)
+    cfg = PhantomConfig(
+        field               = FIELD,
+        voxel_size_mm       = VOXEL_MM,
+        water_voxel_size_mm = water_vox,
+        include_plates      = [:T1, :water],
+        slice_thickness_mm  = VOXEL_MM,
+        slice_center_mm     = (0.0, 0.0, PLATE_Z_MM.T1),
+    )
+    obj     = build_phantom(cfg)
+    scanner = scanner_for_field(cfg)
+    nspins  = length(obj.x)
+    @info &quot;Simulating&quot; water_vox spins = nspins
+
+    raw = simulate(obj, seq, scanner)                # warm-up (JIT) + used for recon
+    ksp = raw_to_kspace(raw, Npe, Nfe)               # complex k-space (DC centred)
+    img = kspace_to_image(ksp)                       # magnitude image
+    ksp_log = log10.(abs.(ksp) .+ eps(Float32))      # log-mag k-space (for display)</code></pre><p>Wall-clock cost: time NREPS fresh simulate() calls and report mean ± std.</p><pre><code class="language-julia hljs">    times = [(@elapsed simulate(obj, seq, scanner)) for _ in 1:NREPS]
+    img, ksp_log, ksp, nspins, mean(times), std(times)
+end</code></pre><p>Reconstruct every config up front so we can diff them. The first entry is the reference; each other entry gets a &quot;ref − this&quot; difference column appended. Tuple layout per entry: (label, img, ksp<em>log, ksp</em>complex, nspins).</p><pre><code class="language-julia hljs">results = [(lbl, recon(water_vox)...) for (water_vox, lbl) in WATER_VOXELS]
+ref_lbl, ref_img, ref_ksp = results[1]              # ref_ksp is log-mag (for diff plots)</code></pre><p>–- Overall sums ––––––––––––––––––––––––––––– Σ|image| (L1) is NOT a Fourier invariant, so it need not match. The physically conserved quantity is the k-space DC point = ∫ signal = total magnetization, which should be ~equal across coarseness (same water volume), but not bit-exact because coarse voxels tile the boundary differently. Σ|k|² is image L2 energy (Parseval), reported for completeness.</p><pre><code class="language-julia hljs">dc = (Npe ÷ 2 + 1, Nfe ÷ 2 + 1)
+ref_dc = results[1][4][dc...]                      # complex DC of the reference
+@printf(&quot;\n%-20s  %8s  %16s  %14s  %14s  %14s\n&quot;,
+        &quot;config&quot;, &quot;spins&quot;, &quot;sim time [s]&quot;, &quot;Σ|image|&quot;, &quot;|k-space DC|&quot;, &quot;Σ|k|²&quot;)
+for (lbl, img, _ksp_log, ksp, nspins, tμ, tσ) in results
+    @printf(&quot;%-20s  %8d  %7.3f ± %-6.3f  %14.6e  %14.6e  %14.6e\n&quot;,
+            lbl, nspins, tμ, tσ, sum(img), abs(ksp[dc...]), sum(abs2, ksp))
+end
+for (lbl, _img, _ksp_log, ksp, _n, _tμ, _tσ) in results[2:end]
+    rel = abs(ref_dc - ksp[dc...]) / abs(ref_dc)   # complex (mag+phase) DC mismatch
+    @printf(&quot;DC mismatch  %s vs %s: %.4f %%\n&quot;, ref_lbl, lbl, 100rel)
+end
+println()</code></pre><p>–- Per-sphere ROI signal ––––––––––––––––––––––––- The k-space DC is dominated by background water; what actually matters is how much the <em>sphere</em> signal (the measurement target) moves when the water grid is coarsened. Compare the reconstructed ROI magnitude at each T1-sphere centre, reference vs each cheaper config. Water voxelisation doesn&#39;t move the spheres, so a single cfg gives the pixel locations for all columns. r = 0 is a single centre pixel (maximally Gibbs-/rounding-sensitive); r = 1 is a 3×3 mean over the sphere, which is the more physically meaningful measure.</p><pre><code class="language-julia hljs">const ROI_RADII = [0, 1]
+roi_cfg = PhantomConfig(field = FIELD, voxel_size_mm = VOXEL_MM,
+                        include_plates = [:T1, :water],
+                        slice_thickness_mm = VOXEL_MM,
+                        slice_center_mm = (0.0, 0.0, PLATE_Z_MM.T1))
+descs   = sphere_descriptors(:T1, roi_cfg)
+px      = sphere_descriptor_pixels(descs, Npe, Nfe, FOV)
+
+for (lbl, img, _ksp_log, _ksp, _n, _tμ, _tσ) in results[2:end]
+    refs = Dict(r =&gt; [roi_mean(ref_img, p...; r = r) for p in px] for r in ROI_RADII)
+    curs = Dict(r =&gt; [roi_mean(img,     p...; r = r) for p in px] for r in ROI_RADII)
+
+    @printf(&quot;\nPer-sphere ROI signal — %s vs %s\n&quot;, ref_lbl, lbl)
+    @printf(&quot;%-12s&quot;, &quot;sphere&quot;)
+    for r in ROI_RADII
+        @printf(&quot;   ref(r%d)  this(r%d)  Δ%%(r%d)&quot;, r, r, r)
+    end
+    println()
+    for (i, d) in enumerate(descs)
+        @printf(&quot;%-12s&quot;, string(d.label))
+        for r in ROI_RADII
+            rr, cc = refs[r][i], curs[r][i]
+            @printf(&quot;  %8.4f  %8.4f  %+6.2f&quot;, rr, cc, 100 * (cc - rr) / rr)
+        end
+        println()
+    end</code></pre><p>NRMSE over spheres is a null-robust headline (per-sphere Δ% blows up for spheres sitting near their IR null, where ref ≈ 0).</p><pre><code class="language-julia hljs">    for r in ROI_RADII
+        nrmse = sqrt(mean(abs2, curs[r] .- refs[r])) / sqrt(mean(abs2, refs[r]))
+        @printf(&quot;ROI NRMSE (r=%d): %.2f %%\n&quot;, r, 100 * nrmse)
+    end
+end
+println()</code></pre><p>–- Does k-space apodisation (Hamming) reduce the coarse-vs-fine error? –– The coarse-grid discrepancy is Gibbs side-lobe leakage from the blockier water edges. A Hamming window suppresses those side-lobes (−13 → −43 dB), so if the diagnosis is right it should shrink the coarse-vs-fine ROI NRMSE — at the cost of resolution. Reconstruct both grids with and without the window (identical recon applied to each) and compare. NRMSE is normalised, so the window&#39;s DC attenuation cancels and only the tracking error remains.</p><pre><code class="language-julia hljs">roi_nrmse(a_img, b_img, r) =
+    let a = [roi_mean(a_img, p...; r = r) for p in px],
+        b = [roi_mean(b_img, p...; r = r) for p in px]
+        sqrt(mean(abs2, b .- a)) / sqrt(mean(abs2, a))
+    end
+
+ref_img_h = kspace_to_image(results[1][4]; hamming = true)
+@printf(&quot;ROI NRMSE — plain vs Hamming-apodised recon (coarse vs fine)\n&quot;)
+@printf(&quot;%-22s  %4s  %9s  %9s\n&quot;, &quot;config&quot;, &quot;r&quot;, &quot;plain&quot;, &quot;hamming&quot;)
+for (lbl, img, _ksp_log, ksp_c, _n, _tμ, _tσ) in results[2:end]
+    img_h = kspace_to_image(ksp_c; hamming = true)
+    for r in ROI_RADII
+        @printf(&quot;%-22s  %4d  %8.2f%%  %8.2f%%\n&quot;, lbl, r,
+                100 * roi_nrmse(ref_img, img, r),
+                100 * roi_nrmse(ref_img_h, img_h, r))
+    end
+end
+println()
+
+const HS = 0.12   # horizontal spacing (fraction) — leaves room for colorbars
+const VS = 0.14   # vertical spacing</code></pre><p>Reconstruct one config&#39;s image + k-space for display under a chosen recon. With Hamming we show the <em>windowed</em> k-space (what the IFFT actually sees), so the apodisation is visible in both rows.</p><pre><code class="language-julia hljs">function recon_for_display(ksp_c; hamming::Bool)
+    img = kspace_to_image(ksp_c; hamming = hamming)
+    wk  = hamming ? ksp_c .* hamming_window_2d(size(ksp_c)...) : ksp_c
+    img, log10.(abs.(wk) .+ eps(Float32))
+end</code></pre><p>Build the fine | coarse | difference figure for a given reconstruction and write it to OUT/outfile. Same 3-column layout for plain and Hamming so the two figures&#39; difference columns are directly comparable.</p><pre><code class="language-julia hljs">function build_figure(; hamming::Bool, suptitle::AbstractString, outfile::AbstractString)
+    ref_img, ref_ksp = recon_for_display(results[1][4]; hamming)
+    ksp_lbl = hamming ? &quot;k-space ×Hamming (log|·|)&quot; : &quot;k-space (log|·|)&quot;
+
+    columns = NamedTuple[]
+    for (lbl, _img, _kl, ksp_c, nspins, tμ, _tσ) in results
+        img, ksp_log = recon_for_display(ksp_c; hamming)
+        push!(columns, (img_title = &quot;$(lbl)&lt;br&gt;$(nspins) spins · $(round(tμ, digits = 1)) s&quot;,
+                        img_z = img, img_cs = &quot;Greys&quot;,
+                        ksp_title = ksp_lbl, ksp_z = ksp_log, ksp_cs = &quot;Viridis&quot;,
+                        is_diff = false))
+    end
+    for (_lbl, _img, _kl, ksp_c, _n, _tμ, _tσ) in results[2:end]
+        img, ksp_log = recon_for_display(ksp_c; hamming)
+        push!(columns, (img_title = &quot;Difference (fine − coarse)&quot;,
+                        img_z = ref_img .- img, img_cs = &quot;RdBu&quot;,
+                        ksp_title = &quot;k-space difference&quot;,
+                        ksp_z = ref_ksp .- ksp_log, ksp_cs = &quot;RdBu&quot;,
+                        is_diff = true))
+    end
+
+    n = length(columns)
+    fig = PlotlyJS.make_subplots(
+        rows = 2, cols = n,
+        subplot_titles = reshape(
+            vcat([c.img_title for c in columns], [c.ksp_title for c in columns]), 1, :),
+        horizontal_spacing = HS, vertical_spacing = VS)</code></pre><p>Subplot domain geometry (matches make_subplots&#39; equal-column layout) so each colorbar sits just right of its own panel rather than at the figure edge.</p><pre><code class="language-julia hljs">    colw = (1 - HS * (n - 1)) / n
+    rowh = (1 - VS) / 2
+    col_x1(j) = (j - 1) * (colw + HS) + colw
+    row_yc(row) = row == 1 ? rowh + VS + rowh / 2 : rowh / 2
+    colorbar(j, row) = Dict(:x =&gt; col_x1(j) + 0.012, :xanchor =&gt; &quot;left&quot;,
+                            :y =&gt; row_yc(row), :yanchor =&gt; &quot;middle&quot;,
+                            :len =&gt; rowh, :thickness =&gt; 10)
+
+    for (j, c) in enumerate(columns)
+        extra = c.is_diff ? (; zmid = 0) : (;)   # diverging diff scale, white = 0
+        PlotlyJS.add_trace!(fig,
+            PlotlyJS.heatmap(; z = c.img_z, colorscale = c.img_cs,
+                             showscale = true, colorbar = colorbar(j, 1), extra...),
+            row = 1, col = j)
+        PlotlyJS.add_trace!(fig,
+            PlotlyJS.heatmap(; z = c.ksp_z, colorscale = c.ksp_cs,
+                             showscale = true, colorbar = colorbar(j, 2), extra...),
+            row = 2, col = j)
+    end
+
+    PlotlyJS.relayout!(fig; height = 780, width = 380 * n,
+        margin = Dict(:t =&gt; 90, :l =&gt; 70, :r =&gt; 80, :b =&gt; 60),
+        title = Dict(:text =&gt; suptitle, :x =&gt; 0.5, :xanchor =&gt; &quot;center&quot;,
+                     :y =&gt; 0.98, :yanchor =&gt; &quot;top&quot;, :font =&gt; Dict(:size =&gt; 18)))
+    for ann in fig.plot.layout.annotations
+        ann[:font] = Dict(:size =&gt; 12)   # clear the figure title
+    end</code></pre><p>Square physical FOV (z is Npe×Nfe ⇒ scaleratio = Nfe/Npe) + axis labels.</p><pre><code class="language-julia hljs">    for k in 1:2n
+        row    = k &lt;= n ? 1 : 2
+        ya     = k == 1 ? &quot;yaxis&quot; : &quot;yaxis$k&quot;
+        xa     = k == 1 ? &quot;xaxis&quot; : &quot;xaxis$k&quot;
+        anchor = k == 1 ? &quot;x&quot; : &quot;x$k&quot;
+        xtitle = row == 1 ? &quot;freq-encode [px]&quot; : &quot;kx [px]&quot;
+        ytitle = row == 1 ? &quot;phase-encode [px]&quot; : &quot;ky [px]&quot;
+        PlotlyJS.relayout!(fig;
+            Symbol(ya) =&gt; Dict(:scaleanchor =&gt; anchor, :scaleratio =&gt; Nfe / Npe,
+                               :title =&gt; Dict(:text =&gt; ytitle)),
+            Symbol(xa) =&gt; Dict(:title =&gt; Dict(:text =&gt; xtitle)))
+    end
+
+    out_path = joinpath(OUT, outfile)
+    PlotlyJS.savefig(fig, out_path; format = &quot;html&quot;)
+    @info &quot;Saved&quot; path = out_path
+end
+
+build_figure(hamming = false,
+    suptitle = &quot;Simulation fidelity vs cost: background-water voxelisation (IR-SE-2D)&quot;,
+    outfile  = &quot;water_coarseness_compare.html&quot;)
+build_figure(hamming = true,
+    suptitle = &quot;Same comparison, Hamming-apodised reconstruction (IR-SE-2D)&quot;,
+    outfile  = &quot;water_coarseness_compare_hamming.html&quot;)</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../snr_calibration/">« SNR Calibration</a><a class="docs-footer-nextpage" href="../../api/">API Reference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 2 June 2026 17:41">Tuesday 2 June 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
