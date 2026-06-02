@@ -1,0 +1,12 @@
+# Documenter build output
+build/
+
+# Resolved dependency manifest (docs env is instantiated from Project.toml)
+Manifest.toml
+
+# Literate.jl-generated example pages (rendered from ../examples/*.jl by make.jl).
+# The hand-written examples/index.md is NOT ignored.
+src/examples/conventional_baseline.md
+src/examples/t1_mapping.md
+src/examples/snr_calibration.md
+src/examples/compare_water_coarseness.md

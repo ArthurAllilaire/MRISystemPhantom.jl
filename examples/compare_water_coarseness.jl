@@ -1,3 +1,5 @@
+# # Water-Coarseness Comparison
+#
 # Compare reconstructed magnitude image and k-space across water-voxel
 # coarseness for ONE sequence (IR-SE-2D). The only knob that changes between
 # columns is `water_voxel_size_mm`:

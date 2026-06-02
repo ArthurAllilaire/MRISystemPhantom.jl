@@ -6,10 +6,11 @@ using MRISystemPhantom
 examples_src = joinpath(@__DIR__, "..", "examples")
 examples_out = joinpath(@__DIR__, "src", "examples")
 
-Literate.markdown(joinpath(examples_src, "t1_mapping.jl"),      examples_out;
-                  execute = false, flavor = Literate.CommonMarkFlavor())
-Literate.markdown(joinpath(examples_src, "snr_calibration.jl"), examples_out;
-                  execute = false, flavor = Literate.CommonMarkFlavor())
+for script in ("conventional_baseline.jl", "t1_mapping.jl",
+               "snr_calibration.jl", "compare_water_coarseness.jl")
+    Literate.markdown(joinpath(examples_src, script), examples_out;
+                      execute = false, flavor = Literate.CommonMarkFlavor())
+end
 
 makedocs(
     sitename = "MRISystemPhantom.jl",
@@ -31,8 +32,11 @@ makedocs(
             "SNR Diagnostics"      => "diagnostics.md",
         ],
         "Examples" => [
-            "T1 Mapping"        => "examples/t1_mapping.md",
-            "SNR Calibration"   => "examples/snr_calibration.md",
+            "Overview"               => "examples/index.md",
+            "Conventional Baseline"  => "examples/conventional_baseline.md",
+            "T1 Mapping"             => "examples/t1_mapping.md",
+            "SNR Calibration"        => "examples/snr_calibration.md",
+            "Water Coarseness"       => "examples/compare_water_coarseness.md",
         ],
         "API Reference"   => "api.md",
     ],

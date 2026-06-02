@@ -1,3 +1,5 @@
+# # Conventional-Sequence Baseline
+#
 # Conventional-sequence baseline for the QalibreMD digital twin.
 # Run IR on every T1-array sphere, multi-TE SE on every T2-array sphere,
 # fit monoexponentials, report MAPE against the manual values.
