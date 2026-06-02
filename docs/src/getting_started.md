@@ -85,6 +85,6 @@ slow, use the closed-form forward model instead:
 
 ```julia
 # Orders of magnitude faster — exact for a single-spin phantom
-sig = generalized_ir_signal(1.2, 0.1; TI = 0.4, α = π)
-# Returns a vector of n_adc magnitude samples decaying with T2
+sig = generalized_ir_signal(spin.T1, spin.T2; TI = 0.4, α = π)
+# Returns a vector of n_adc (default=64) magnitude samples decaying with T2
 ```
