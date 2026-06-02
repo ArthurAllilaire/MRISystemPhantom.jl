@@ -10,6 +10,8 @@
 # `max_spins` caps how many spins are sent to Plotly. The default 20 000 is
 # why earlier renders looked sparse; bumping it to 200 000+ makes the
 # geometry readable.
+#
+# Run with:  julia --project=. examples/plot_phantom.jl
 
 using KomaMRI
 using MRISystemPhantom

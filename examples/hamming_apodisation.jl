@@ -14,6 +14,8 @@
 # (an element-wise multiply), independent of and far cheaper than the simulation.
 #
 # Writes one interactive Plotly HTML to src/assets/.
+#
+# Run with:  julia --project=. examples/hamming_apodisation.jl
 
 using MRISystemPhantom, KomaMRI
 

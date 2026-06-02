@@ -11,6 +11,8 @@
 # the `seq = ...` line to compare a different sequence.
 #
 # Writes one interactive Plotly HTML to src/assets/.
+#
+# Run with:  julia --project=. examples/compare_water_coarseness.jl
 
 using MRISystemPhantom, KomaMRI, Printf, Statistics
 

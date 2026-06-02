@@ -17,6 +17,8 @@
 # difference between them is purely how the water signal is computed, not where
 # the spins sit. The interesting axis to *see* is water voxelisation thickness:
 # default (= sphere voxel size) vs the coarse 3 mm used by `cached3` / `full3`.
+#
+# Run with:  julia --project=. examples/plot_fidelity_phantoms.jl
 
 using KomaMRI
 using MRISystemPhantom

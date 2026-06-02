@@ -14,6 +14,8 @@
 #
 # This eliminates Rayleigh bias and structured background artefacts, making it
 # the gold standard for reproducible SNR measurement (NEMA MS-1 2014).
+#
+# Run with:  julia --project=. examples/snr_calibration.jl
 
 using MRISystemPhantom, KomaMRI, Random
 

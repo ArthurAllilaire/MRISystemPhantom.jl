@@ -1,4 +1,4 @@
-# Pure-Julia monoexponential fits used by the E0 baseline and the
+# Pure-Julia monoexponential fits used by the conventional baseline and the
 # running-estimate feature of the later RL environments. No external
 # optimiser dependency — T2 is closed-form in log space, T1 is a log-grid
 # search over T1 with closed-form (A, B) at each T1.

@@ -144,7 +144,7 @@
             _, _, _, info_s = e1_step!(env_s, ir_actions[k])
             err_a = info_a["err"]; err_s = info_s["err"]
         end
-        # Simulated backend is biased by RF duration (~0.5% offset in E0) —
+        # Simulated backend is biased by RF duration (~0.5% offset in the baseline) —
         # accept generous tolerance on the gap.
         @test abs(err_a - err_s) < 0.05
     end

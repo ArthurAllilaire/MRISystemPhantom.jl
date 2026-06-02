@@ -41,7 +41,7 @@ include("builder.jl")
 # --- sequences, fitting, baseline experiments -----------------------------
 include("sequences/blocks.jl")
 include("fitting/fits.jl")
-include("baselines/e0.jl")
+include("baselines/conventional.jl")
 include("baselines/cr_optimal.jl")
 include("baselines/cr_optimal_alpha.jl")
 
@@ -81,12 +81,12 @@ export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        single_spin_phantom,
        # fitting
        fit_t1_ir, fit_t2_se,
-       # E0 baseline
+       # conventional-sequence baseline
        measure_ir_signal, measure_se_signal, measure_mse_signal,
        measure_t1, measure_t2,
        default_TI_schedule, default_TE_schedule,
        adaptive_TI_schedule, adaptive_TE_schedule,
-       run_e0,
+       run_conventional_baseline,
        # CR-optimal baseline
        cr_T1_variance, cr_fleet_objective, cr_optimize, cr_optimize_sweep,
        block_time_s, schedule_time_s,

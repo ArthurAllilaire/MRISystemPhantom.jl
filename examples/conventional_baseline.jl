@@ -1,11 +1,13 @@
-# E0 — conventional-sequence baseline for the QalibreMD digital twin.
-# PLAN.md §4 E0: run IR on every T1-array sphere, multi-TE SE on every
-# T2-array sphere, fit monoexponentials, report MAPE against the manual
-# values. Target: MAPE < 3 % (simulator sanity check + RL yardstick).
+# Conventional-sequence baseline for the QalibreMD digital twin.
+# Run IR on every T1-array sphere, multi-TE SE on every T2-array sphere,
+# fit monoexponentials, report MAPE against the manual values.
+# Target: MAPE < 3 % (simulator sanity check + RL yardstick).
 #
-# Single-spin phantoms (0-D, no spatial encoding) are used because E0 is
-# a non-spatial measurement — orders of magnitude faster than a
+# Single-spin phantoms (0-D, no spatial encoding) are used because this
+# baseline is a non-spatial measurement — orders of magnitude faster than a
 # voxelised sphere, matching the `01-FID.jl` pattern.
+#
+# Run with:  julia --project=. examples/conventional_baseline.jl
 
 using MRISystemPhantom
 using Printf
@@ -20,8 +22,8 @@ function print_table(header, rows)
 end
 
 for field in (:T3, :T15)
-    @info "Running E0 at field" field
-    res = run_e0(; field = field, verbose = false)
+    @info "Running conventional baseline at field" field
+    res = run_conventional_baseline(; field = field, verbose = false)
 
     t1_rows = [("T1-$i", 1000 * res.T1_true[i],
                            1000 * res.T1_est[i],

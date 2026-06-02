@@ -1,4 +1,4 @@
-# Pulseq-style sequence building blocks used by E0 and the later RL
+# Pulseq-style sequence building blocks used by the conventional baseline and the later RL
 # experiments. Blocks are parameterised functions returning a `Sequence`
 # that can be concatenated with `+=` or simulated directly.
 #
@@ -510,7 +510,7 @@ end
 
 Zero-dimensional phantom (one spin at the origin) with the given
 relaxation times. Fastest possible simulate-target — the right thing
-for non-spatial E0 measurements, mirroring `01-FID.jl`.
+for non-spatial baseline measurements, mirroring `01-FID.jl`.
 """
 function single_spin_phantom(; T1::Real, T2::Real, ρ::Real = 1.0)
     Phantom(x = [0.0], T1 = [Float64(T1)], T2 = [Float64(T2)],

@@ -2,7 +2,9 @@
 #
 # This example builds the T1-plate slice of the QalibreMD Model 130 phantom,
 # simulates a multi-TI inversion-recovery spin-echo acquisition at 3 T, and
-# fits T1 per sphere — reproducing the core E0 pipeline.
+# fits T1 per sphere — reproducing the core conventional-baseline pipeline.
+#
+# Run with:  julia --project=. examples/t1_mapping.jl
 
 using MRISystemPhantom, KomaMRI
 

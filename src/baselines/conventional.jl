@@ -1,5 +1,5 @@
-# E0 — conventional-sequence baseline (PLAN.md §4 E0).
-# Runs IR on each T1-array sphere, multi-TE SE on each T2-array sphere,
+# Conventional-sequence baseline (the "E0" rung of the ../icr experiment ladder,
+# PLAN.md §4). Runs IR on each T1-array sphere, multi-TE SE on each T2-array sphere,
 # fits T1 / T2 monoexponentials, and compares to the manual values.
 # The fits become the yardstick the RL agent has to match (on accuracy)
 # and beat (on scan time).
@@ -152,20 +152,20 @@ function measure_t2(T1_true::Real, T2_true::Real;
 end
 
 """
-    run_e0(; field = :T3, verbose = true)
+    run_conventional_baseline(; field = :T3, verbose = true)
 
-Full E0 baseline: estimate T1 for every T1-array sphere and T2 for every
-T2-array sphere at the given field strength. Returns a NamedTuple with
-per-sphere truth, estimate, and percentage error plus overall MAPEs.
+Full conventional-sequence baseline: estimate T1 for every T1-array sphere and T2
+for every T2-array sphere at the given field strength, using fixed IR/SE sweeps and
+monoexponential fits. Returns a NamedTuple with per-sphere truth, estimate, and
+percentage error plus overall MAPEs.
 """
-function run_e0(; field::Symbol = :T3, verbose::Bool = true,
+function run_conventional_baseline(; field::Symbol = :T3, verbose::Bool = true,
                  n_TIs::Int = 10, n_TEs::Int = 10)
     t1_true  = T1_ARRAY[field]
     t2_of_t1 = T2_OF_T1_ARRAY[field]
-    t2_true  = T2_ARRAY[field]
     sys = scanner_for_field(field)
-
-    verbose && @info "E0: T1 mapping on the T1 array" field n_TIs
+    
+    verbose && @info "Conventional baseline: T1 mapping on the T1 array" field n_TIs
     t1_est = zeros(14)
     for i in 1:14
         TIs = adaptive_TI_schedule(t1_true[i]; n = n_TIs)
@@ -173,10 +173,12 @@ function run_e0(; field::Symbol = :T3, verbose::Bool = true,
         t1_est[i] = res.T1_est
         verbose && @info "  T1-$i" T1_true_ms = 1000*t1_true[i] T1_est_ms = 1000*res.T1_est
     end
-
-    verbose && @info "E0: T2 mapping on the T2 array" field n_TEs
-    t2_est = zeros(14)
+    
+    t2_true  = T2_ARRAY[field]
     t1_of_t2 = T1_OF_T2_ARRAY[field]
+    
+    verbose && @info "Conventional baseline: T2 mapping on the T2 array" field n_TEs
+    t2_est = zeros(14)
     for i in 1:14
         TEs = adaptive_TE_schedule(t2_true[i]; n = n_TEs)
         res = measure_t2(t1_of_t2[i], t2_true[i]; TEs = TEs, scanner = sys)
@@ -190,7 +192,7 @@ function run_e0(; field::Symbol = :T3, verbose::Bool = true,
     t2_mape = sum(t2_err_pct) / length(t2_err_pct)
 
     if verbose
-        @info "E0 summary" field T1_MAPE_pct = t1_mape T2_MAPE_pct = t2_mape
+        @info "Conventional baseline summary" field T1_MAPE_pct = t1_mape T2_MAPE_pct = t2_mape
     end
 
     (field   = field,
