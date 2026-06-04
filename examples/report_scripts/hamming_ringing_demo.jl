@@ -1,11 +1,10 @@
-# EXPLORATORY / intuition-building — NOT a report figure.
+# Report figure: the 1-D mechanism behind apodisation. Companion to
+# hamming_window_response.jl (window weights + frequency response) and
+# hamming_apodisation.jl (effect on the phantom). Reconstructs a single point
+# source and a step edge from a finite (N-line) k-space, box vs Hamming.
 #
-# The report's apodisation story is carried by hamming_apodisation.jl (effect on a
-# phantom) and hamming_window_response.jl (window weights + PSF). This script is
-# the 1-D textbook companion that makes the "why edges ring" argument concrete:
-# reconstruct a single point source and a step edge from a finite (N-line) k-space,
-# box vs Hamming, and overlay the true object.
-#
+# The left panel IS the PSF (delta * PSF = PSF); the right panel is the step edge
+# convolved with that same PSF — so panel (a) explains panel (b):
 #   * Point source (left): box reconstructs a Dirichlet/sinc PSF whose nulls fall
 #     exactly on integer pixel offsets — markers show neighbours = 0 (no leakage at
 #     sample points). Hamming's wider main lobe is nonzero at ±1 px ⇒ it blurs.
@@ -13,7 +12,8 @@
 #     Gibbs ringing. Hamming's −43 dB side-lobes suppress it, at the cost of a
 #     softer (wider) edge.
 #
-# Writes one PNG to src/assets/. Run:  julia --project=. examples/hamming_ringing_demo.jl
+# Writes one PNG to src/assets/report/.
+# Run:  julia --project=. examples/report_scripts/hamming_ringing_demo.jl
 
 using MRISystemPhantom, KomaMRI, FFTW
 
