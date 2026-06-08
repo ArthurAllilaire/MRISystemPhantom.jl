@@ -64,16 +64,19 @@ include("diagnostics/snr.jl")
 
 Build an interactive 3D render of a phantom, with one Plotly `scatter3d` trace
 per group (T1/T2/PD plates, fiducials, custom spheres, background water). Spheres
-are coloured by a selectable property (`T1`, `T2`, `T2s`, `ρ`, `Δw`), water is
-translucent with an opacity slider, and every group can be toggled from the legend.
+are coloured by a selectable property (`T1`, `T2`, `T2s`, `ρ`, `Δw`). Water is a
+translucent constant-colour trace by default; pass `color_water = true` to put it
+on the same property colour axis as the spheres. Every group can be toggled from
+the legend.
 
 This is implemented in a package extension that is only loaded when `PlotlyJS` is
 available. Call it after `using PlotlyJS` (or any package that loads it, e.g.
 `using KomaMRI`); otherwise this fallback tells you to load PlotlyJS.
 
 Keyword arguments: `color_by`, `properties`, `max_water_points`,
-`max_sphere_points`, `water_opacity`, `opacity_sliders` (`:water`/`:all`/`:none`),
-`height`, and `file` (when set, the figure is also written to that path as HTML).
+`max_sphere_points`, `color_water`, `water_opacity`, `opacity_sliders`
+(`:water`/`:all`/`:none`), `height`, and `file` (when set, the figure is also
+written to that path as HTML).
 """
 function plot_phantom_html(args...; kwargs...)
     error("plot_phantom_html requires PlotlyJS. Load PlotlyJS, or another package " *

@@ -45,6 +45,22 @@ using KomaMRI
                   "T15 phantom - spheres coloured by Δw"
         end
 
+        @testset "water can join the property colour axis" begin
+            cfg = PhantomConfig(voxel_size_mm = 3.0, water_voxel_size_mm = 5.0)
+            fig = plot_phantom_html(cfg; color_water = true)
+            names = [t[:name] for t in fig.plot.data]
+            @test names[1] == "water"
+            @test fig.plot.data[1][:marker][:coloraxis] == "coloraxis"
+            @test length(fig.plot.data[1][:marker][:color]) == length(fig.plot.data[1][:x])
+            @test fig.plot.layout[:title][:text] == "T15 phantom - spins coloured by T1"
+
+            t2_button = fig.plot.layout[:updatemenus][1][:buttons][2]
+            @test t2_button[:args][3] == collect(0:(length(fig.plot.data) - 1))
+            @test length(t2_button[:args][1]["marker.color"]) == length(fig.plot.data)
+            @test t2_button[:args][2]["title.text"] ==
+                  "T15 phantom - spins coloured by T2"
+        end
+
         @testset "no water when excluded" begin
             cfg = PhantomConfig(voxel_size_mm = 3.0, include_plates = [:T1, :fiducials])
             fig = plot_phantom_html(cfg)

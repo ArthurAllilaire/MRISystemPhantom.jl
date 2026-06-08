@@ -20,8 +20,8 @@ const _PLATE_LABEL = Dict(:T1 => "T1 plate", :T2 => "T2 plate",
 _subsample(idx, maxn) = length(idx) <= maxn ? idx :
     unique(idx[round.(Int, range(1, length(idx); length = maxn))])
 
-_plot_title(cfg::PhantomConfig, color_by::Symbol) =
-    "$(cfg.field) phantom - spheres coloured by $(color_by)"
+_plot_title(cfg::PhantomConfig, color_by::Symbol, color_water::Bool) =
+    "$(cfg.field) phantom - $(color_water ? "spins" : "spheres") coloured by $(color_by)"
 
 function _hover_data(obj, idx)
     [[1e3 * obj.x[i], 1e3 * obj.y[i], 1e3 * obj.z[i],
@@ -56,6 +56,7 @@ function plot_phantom_html(cfg::PhantomConfig = PhantomConfig();
         properties = (:T1, :T2, :T2s, :ρ, :Δw),
         max_water_points::Int = 200_000,
         max_sphere_points::Int = 400_000,
+        color_water::Bool = false,
         water_opacity::Float64 = 0.08,
         opacity_sliders::Symbol = :water,
         height::Int = 720,
@@ -94,28 +95,35 @@ function plot_phantom_html(cfg::PhantomConfig = PhantomConfig();
         assigned .|= m
         push!(group_idx, _subsample(findall(m), max_sphere_points))
     end
-    water_idx = _subsample(findall(.!assigned), max_water_points)
+    water_all = findall(.!assigned)
+    water_idx = _subsample(water_all, max_water_points)
 
     # --- colour data (precompute every property for the live dropdown) -----
     sphere_all = findall(assigned)
     prop_vals = Dict(p => getproperty(obj, p) for p in properties)
-    # Shared colour range per property across all sphere spins, so groups are
-    # comparable on one colorbar.
-    prop_range = Dict(p => (isempty(sphere_all) ? (0.0, 1.0) :
-                            extrema(prop_vals[p][sphere_all])) for p in properties)
+    colour_range_idx = color_water ? vcat(sphere_all, water_all) : sphere_all
+    # Shared colour range per property across all coloured spins, so groups are
+    # comparable on one colorbar. By default water stays a constant translucent
+    # trace so it does not stretch the sphere contrast range.
+    prop_range = Dict(p => (isempty(colour_range_idx) ? (0.0, 1.0) :
+                            extrema(prop_vals[p][colour_range_idx])) for p in properties)
     color_by in properties || (color_by = first(properties))
 
     # --- traces (water first so opaque spheres render on top) --------------
     traces = PlotlyJS.GenericTrace[]
     sphere_trace_idx = Int[]                  # 0-based Plotly indices of sphere traces
     if !isempty(water_idx)
+        water_marker = color_water ?
+            PlotlyJS.attr(size = 1.5, color = prop_vals[color_by][water_idx],
+                          coloraxis = "coloraxis", opacity = water_opacity) :
+            PlotlyJS.attr(size = 1.5, color = "lightblue",
+                          opacity = water_opacity)
         push!(traces, PlotlyJS.scatter3d(
             x = obj.x[water_idx], y = obj.y[water_idx], z = obj.z[water_idx],
             mode = "markers", name = "water",
             customdata = _hover_data(obj, water_idx),
             hovertemplate = _HOVER_TEMPLATE,
-            marker = PlotlyJS.attr(size = 1.5, color = "lightblue",
-                                   opacity = water_opacity)))
+            marker = water_marker))
     end
     cmin0, cmax0 = prop_range[color_by]
     for (gi, (name, _)) in enumerate(sphere_groups)
@@ -132,17 +140,22 @@ function plot_phantom_html(cfg::PhantomConfig = PhantomConfig();
 
     # --- live property dropdown (recolour sphere traces) -------------------
     updatemenus = []
-    if !isempty(sphere_trace_idx) && length(properties) > 1
+    colour_trace_idx = copy(sphere_trace_idx)
+    colour_group_idx = copy(group_idx)
+    if color_water && !isempty(water_idx)
+        colour_trace_idx = vcat(0, colour_trace_idx)
+        colour_group_idx = vcat([water_idx], colour_group_idx)
+    end
+    if !isempty(colour_trace_idx) && length(properties) > 1
         buttons = [PlotlyJS.attr(label = String(p), method = "update",
             args = [Dict{String,Any}(
-                "marker.color" => [prop_vals[p][group_idx[gi]]
-                                   for gi in 1:length(sphere_groups)]),
+                "marker.color" => [prop_vals[p][idx] for idx in colour_group_idx]),
                 Dict{String,Any}(
                     "coloraxis.cmin" => prop_range[p][1],
                     "coloraxis.cmax" => prop_range[p][2],
                     "coloraxis.colorbar.title.text" => String(p),
-                    "title.text" => _plot_title(cfg, p)),
-                sphere_trace_idx])
+                    "title.text" => _plot_title(cfg, p, color_water)),
+                colour_trace_idx])
             for p in properties]
         push!(updatemenus, PlotlyJS.attr(type = "dropdown", direction = "down",
             showactive = true, x = 0.0, y = 1.06, xanchor = "left", yanchor = "top",
@@ -177,7 +190,7 @@ function plot_phantom_html(cfg::PhantomConfig = PhantomConfig();
     end
 
     bottom_margin = 50 + 60 * length(sliders)
-    title = _plot_title(cfg, color_by)
+    title = _plot_title(cfg, color_by, color_water)
 
     layout = PlotlyJS.Layout(height = height,
         title = PlotlyJS.attr(text = title, x = 0.5, xanchor = "center",

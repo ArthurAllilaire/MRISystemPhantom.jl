@@ -1,97 +1,75 @@
-# Render and save phantom-map snapshots of the QalibreMD Model 130 digital
-# twin. Writes interactive HTML into `src/assets/`.
+# Render interactive phantom views of the QalibreMD Model 130 digital twin.
+# Writes Plotly HTML into `src/assets/`.
 #
-# Two render modes:
-#   • view_2d = true  → scatter in the x-y plane, best for checking the
-#     ring layout of each plate against the manual photos.
-#   • view_2d = false → full 3D scatter (slider over z), good for a global
-#     overview but sparser unless max_spins is large.
-#
-# `max_spins` caps how many spins are sent to Plotly. The default 20 000 is
-# why earlier renders looked sparse; bumping it to 200 000+ makes the
-# geometry readable.
+# `plot_phantom_html` creates one trace per logical group and includes a dropdown
+# for T1/T2/T2s/rho/delta-w colouring. Water is normally a constant translucent
+# trace; the material-map slices below pass `color_water = true` to put water on
+# the same colour axis as the spheres.
 #
 # Run with:  julia --project=. examples/plot_phantom.jl
 
-using KomaMRI
 using MRISystemPhantom
-
-const PlotlyJS = parentmodule(typeof(plot_phantom_map(
-    Phantom(x = [0.0]), :T1; height = 10)))
+using KomaMRI   # loads PlotlyJS transitively, which activates the viewer extension
 
 const ASSETS = joinpath(@__DIR__, "..", "src", "assets")
 isdir(ASSETS) || mkpath(ASSETS)
 
-save_html(p, name) = PlotlyJS.savefig(p, joinpath(ASSETS, name); format = "html")
-
-# ---------- slicing helper ----------------------------------------------
-"""
-    slab(obj, z_mm; halfthick_mm)
-
-Return a Phantom containing just the spins whose z lies within
-`±halfthick_mm` of `z_mm`. Useful for rendering one plate at a time.
-"""
-function slab(obj::Phantom, z_mm::Real; halfthick_mm::Real = 8.0)
-    z0 = z_mm * 1e-3
-    dz = halfthick_mm * 1e-3
-    mask = findall(z -> abs(z - z0) <= dz, obj.z)
-    obj[mask]
+function save_render(cfg::PhantomConfig, name::AbstractString;
+        color_by::Symbol = :T1, color_water::Bool = false, kwargs...)
+    out = joinpath(ASSETS, name)
+    plot_phantom_html(cfg; color_by, color_water, file = out, kwargs...)
+    @info "Saved phantom render" file = out
 end
 
-# ---------- 1. full phantom, fine voxels, high spin cap ------------------
-cfg_fine = PhantomConfig(field = :T3, voxel_size_mm = 1.0)
-obj_fine = build_phantom(cfg_fine)
-@info "Fine full phantom" spins = length(obj_fine.x)
+# ---------- 1. full phantom ---------------------------------------------
+cfg_full = PhantomConfig(field = :T3, voxel_size_mm = 1.0)
+save_render(cfg_full, "phantom_3T_3d.html";
+            color_by = :T1, height = 650,
+            max_water_points = 250_000, max_sphere_points = 250_000)
 
-for prop in (:T1, :T2, :ρ)
-    p3d = plot_phantom_map(obj_fine, prop;
-                           height = 650, max_spins = 250_000)
-    save_html(p3d, "phantom_$(prop)_3T_3d.html")
-end
-
-# ---------- 2. per-plate 2D slices (ring layout) -------------------------
-# Plates are held on plate_layouts.jl (PLATE_Z_MM).
+# ---------- 2. per-plate axial slabs ------------------------------------
+# These replace the old 2-D `plot_phantom_map` slice snapshots. The viewer is 3-D,
+# but the phantom builder applies the same slab mask through PhantomConfig.
 for (plate, z_mm) in pairs(PLATE_Z_MM)
-    sl  = slab(obj_fine, z_mm; halfthick_mm = 8.0)   # catches the sphere caps
-    key = plate === :PD ? :ρ : plate                  # colour by the right prop
-    p2d = plot_phantom_map(sl, key;
-                           view_2d  = true,
-                           height   = 650,
-                           max_spins = 150_000)
-    save_html(p2d, "plate_$(plate)_slice_3T.html")
+    color_by = plate === :PD ? :ρ : plate
+    cfg_slice = PhantomConfig(
+        field              = :T3,
+        voxel_size_mm      = 1.0,
+        include_plates     = [plate, :water],
+        slice_thickness_mm = 16.0,
+        slice_center_mm    = (0.0, 0.0, z_mm),
+    )
+    save_render(cfg_slice, "plate_$(plate)_slice_3T.html";
+                color_by, color_water = true, height = 650,
+                max_water_points = 150_000, max_sphere_points = 150_000)
 end
 
-# ---------- 3. fiducial grid, 2D top view (z ≈ 0) ------------------------
-cfg_fid = PhantomConfig(field = :T3, voxel_size_mm = 1.0,
-                        include_plates = [:fiducials])
-obj_fid = build_phantom(cfg_fid)
-p_fid = plot_phantom_map(slab(obj_fid, 0.0; halfthick_mm = 5.5), :T1;
-                         view_2d = true, height = 650, max_spins = 150_000)
-save_html(p_fid, "fiducials_z0_slice.html")
+# ---------- 3. fiducial grid near z = 0 ---------------------------------
+cfg_fid = PhantomConfig(
+    field              = :T3,
+    voxel_size_mm      = 1.0,
+    include_plates     = [:fiducials],
+    slice_thickness_mm = 11.0,
+    slice_center_mm    = (0.0, 0.0, 0.0),
+)
+save_render(cfg_fid, "fiducials_z0_slice.html";
+            color_by = :T1, height = 650, max_sphere_points = 150_000)
 
 # ---------- 4. vertical slice through all three contrast plates ----------
-# Instead of an axial slab (one plate), take a thin VERTICAL slab centred at
-# the origin whose plane is spanned by the x and z axes (normal along y). The
-# plates are stacked in z (PLATE_Z_MM = T1 56.5, T2 16.5, PD −23.5 mm), so this
-# cut passes through the central sphere of each — T1, T2 and PD visible at once.
-# With y collapsed, plot_phantom_map renders the x–z plane automatically.
+# A thin y-normal slab exposes the x-z stack of T1, T2 and PD plates.
 cfg_vert = PhantomConfig(
     field              = :T3,
     voxel_size_mm      = 1.0,
     include_plates     = [:T1, :T2, :PD, :water],
     slice_thickness_mm = 1.0,
     slice_center_mm    = (0.0, 0.0, 0.0),
-    slice_normal       = (0.0, 1.0, 0.0),   # plane spanned by x and z
+    slice_normal       = (0.0, 1.0, 0.0),
 )
-obj_vert = build_phantom(cfg_vert)
-@info "Vertical slice" spins = length(obj_vert.x)
-for prop in (:T1, :T2, :ρ)
-    p_vert = plot_phantom_map(obj_vert, prop;
-                              view_2d = false, height = 650, max_spins = 150_000)
-    save_html(p_vert, "vertical_slice_$(prop)_3T.html")
-end
+save_render(cfg_vert, "vertical_slice_3T.html";
+            color_by = :T1, color_water = true, height = 650,
+            max_water_points = 150_000, max_sphere_points = 150_000)
 
-# ---------- 5. augmented full phantom ------------------------------------
+# ---------- 5. augmented full phantom -----------------------------------
 cfg_aug = PhantomConfig(
     field          = :T3,
     voxel_size_mm  = 1.5,
@@ -101,9 +79,7 @@ cfg_aug = PhantomConfig(
     augment        = AugmentConfig(T1_sigma_rel = 0.03, B0_sigma_Hz = 3.0),
     rng_seed       = 42,
 )
-obj_aug = build_phantom(cfg_aug)
-p_aug = plot_phantom_map(obj_aug, :T1;
-                         height = 650, max_spins = 200_000)
-save_html(p_aug, "phantom_T1_augmented_3T.html")
+save_render(cfg_aug, "phantom_T1_augmented_3T.html";
+            color_by = :T1, height = 650, max_sphere_points = 200_000)
 
-@info "Saved phantom maps" dir = ASSETS files = readdir(ASSETS)
+@info "Saved phantom renders" dir = ASSETS

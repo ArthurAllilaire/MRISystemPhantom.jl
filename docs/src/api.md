@@ -103,8 +103,9 @@ roi_mean
 
 `plot_phantom_html` lives in a PlotlyJS package extension: load `PlotlyJS` (or any
 package that pulls it in, e.g. `KomaMRI`) to make it available. The default
-dropdown colours spheres by `T1`, `T2`, `T2s`, `ρ`, or `Δw`. See
-`examples/plot_phantom_3d.jl`.
+dropdown colours spheres by `T1`, `T2`, `T2s`, `ρ`, or `Δw`; pass
+`color_water = true` when water should share that colour axis instead of staying
+a constant translucent trace. See `examples/plot_phantom_3d.jl`.
 
 ```@docs
 plot_phantom_html

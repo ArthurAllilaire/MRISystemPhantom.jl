@@ -8,7 +8,9 @@ voxel size, which plates to include, pose, noise — lives in the config.
 
 The full phantom can be inspected interactively. Use the legend to toggle plates,
 the dropdown to colour spheres by material properties, and hover over points for
-coordinates and tissue parameters.
+coordinates and tissue parameters. Water is shown as a translucent constant-colour
+trace by default; scripts can pass `color_water = true` when water should share
+the selected material colour axis.
 
 ```@raw html
 <div class="phantom-viewer-frame">
