@@ -77,6 +77,17 @@ phys_to_pixel_wrap
 roi_mean
 ```
 
+## Visualisation
+
+`plot_phantom_html` lives in a PlotlyJS package extension: load `PlotlyJS` (or any
+package that pulls it in, e.g. `KomaMRI`) to make it available. The default
+dropdown colours spheres by `T1`, `T2`, `T2s`, `ρ`, or `Δw`. See
+`examples/plot_phantom_3d.jl`.
+
+```@docs
+plot_phantom_html
+```
+
 ## SNR diagnostics
 
 See the [SNR Diagnostics](@ref) page for the full API and usage guide.

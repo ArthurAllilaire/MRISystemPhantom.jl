@@ -18,4 +18,5 @@ using KomaMRI
     include("test_fit_alpha.jl")
     include("test_cr_optimal_alpha.jl")
     include("test_snr.jl")
+    include("test_plot_phantom_html.jl")
 end

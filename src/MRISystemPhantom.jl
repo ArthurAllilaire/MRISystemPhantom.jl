@@ -57,6 +57,28 @@ include("water_cache.jl")
 # --- diagnostics ----------------------------------------------------------
 include("diagnostics/snr.jl")
 
+# --- interactive 3D visualisation (implemented in the PlotlyJS extension) --
+"""
+    plot_phantom_html(cfg::PhantomConfig = PhantomConfig(); kwargs...)
+
+Build an interactive 3D render of a phantom, with one Plotly `scatter3d` trace
+per group (T1/T2/PD plates, fiducials, custom spheres, background water). Spheres
+are coloured by a selectable property (`T1`, `T2`, `T2s`, `ρ`, `Δw`), water is
+translucent with an opacity slider, and every group can be toggled from the legend.
+
+This is implemented in a package extension that is only loaded when `PlotlyJS` is
+available. Call it after `using PlotlyJS` (or any package that loads it, e.g.
+`using KomaMRI`); otherwise this fallback tells you to load PlotlyJS.
+
+Keyword arguments: `color_by`, `properties`, `max_water_points`,
+`max_sphere_points`, `water_opacity`, `opacity_sliders` (`:water`/`:all`/`:none`),
+`height`, and `file` (when set, the figure is also written to that path as HTML).
+"""
+function plot_phantom_html(args...; kwargs...)
+    error("plot_phantom_html requires PlotlyJS. Load PlotlyJS, or another package " *
+          "that loads PlotlyJS, before calling plot_phantom_html.")
+end
+
 export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        build_phantom, build_plate, build_sphere, build_background_water,
        build_phantom_from_descriptors,
@@ -112,6 +134,8 @@ export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        background_mask, nema_stats, dual_acq_stats,
        image_snr_report, snr_report, snr_report_from_clean,
        pooled_image_snr_report, multi_block_snr_report_to_dict,
-       print_snr_report, snr_report_to_dict
+       print_snr_report, snr_report_to_dict,
+       # interactive 3D visualisation (PlotlyJS extension)
+       plot_phantom_html
 
 end # module

@@ -4,6 +4,43 @@ The central type is [`PhantomConfig`](@ref). Pass one to [`build_phantom`](@ref)
 and you get a `KomaMRI.Phantom` ready for simulation. Everything — field strength,
 voxel size, which plates to include, pose, noise — lives in the config.
 
+## Interactive 3D Viewer
+
+The full phantom can be inspected interactively. Use the legend to toggle plates,
+the dropdown to colour spheres by material properties, and hover over points for
+coordinates and tissue parameters.
+
+```@raw html
+<div class="phantom-viewer-frame">
+  <iframe
+    id="phantom-interactive-3d"
+    title="Interactive 3D rendering of the MR system phantom"
+    width="100%"
+    height="760"
+    loading="lazy"
+    style="border:1px solid #d8dee4; border-radius:6px; background:white;"
+    allowfullscreen>
+  </iframe>
+</div>
+<p>
+  <a id="phantom-interactive-3d-link" href="assets/phantom_interactive_3d.html" target="_blank" rel="noopener">
+    Open the interactive phantom in a full page
+  </a>
+</p>
+<script>
+(function () {
+  var frame = document.getElementById("phantom-interactive-3d");
+  var link = document.getElementById("phantom-interactive-3d-link");
+  if (!frame || !link) return;
+  var asset = "phantom_interactive_3d.html";
+  var base = window.location.pathname.endsWith("/") ? "../assets/" : "assets/";
+  var src = base + asset;
+  frame.src = src;
+  link.href = src;
+})();
+</script>
+```
+
 ## PhantomConfig fields
 
 ```julia
