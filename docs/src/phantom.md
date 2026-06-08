@@ -165,3 +165,88 @@ The relaxation values are sourced from:
 | `T2_ARRAY[:T3]` | T2 values for the 14 T2-plate spheres |
 | `T2_OF_T1_ARRAY` | T2 companion values for each T1-plate sphere |
 | `PD_FRACTIONS` | Proton density fractions for PD-plate spheres |
+
+## Domain randomisation: random phantoms
+
+For RL training "by the book" the agent should never see the true phantom
+configuration: sample a *different* random phantom each episode and keep the true
+values hidden for evaluation. [`RandomPhantomConfig`](@ref) describes a
+distribution over deterministic `PhantomConfig`s, and
+[`sample_phantom_config`](@ref) draws one episode.
+
+!!! note "Why not `AugmentConfig`?"
+    `AugmentConfig` applies *independent per-spin* jitter, so each sphere's mean
+    relaxation stays at its nominal value — the true values still leak. Random
+    phantoms instead draw **one** value per sphere per episode, before
+    voxelisation, so the nominal values are never observable.
+
+```julia
+using MRISystemPhantom, Distributions
+
+rp = RandomPhantomConfig(
+    base = PhantomConfig(include_plates = [:T1, :water]),
+    sphere_selector  = E2SphereSelector(subset_size = 5, forced_indices = [1, 14]),
+    material_sampler = RatioPreservingLogNormalT1(0.2),     # jitter T1, keep T2/T1
+    pose_sampler     = InPlanePoseSampler(rotation_sigma_rad = 0.05,
+                                          translation_sigma_mm = 2.0),
+)
+
+episode = sample_phantom_config(rp; rng_seed = 7)
+phantom = build_phantom(episode.cfg)   # safe to show the agent
+# episode.truth holds the hidden ground truth — keep it out of the observation
+```
+
+The returned [`RandomPhantomEpisode`](@ref) carries `cfg` (an ordinary
+deterministic config) and a hidden `truth` record (`descriptors_sampled`,
+`active_labels`, `active_indices_by_plate`, pose, `episode_seed`, `build_seed`).
+`truth` is descriptor-level and pre-augment.
+
+Contrast plates (`:T1`, `:T2`, `:PD`) listed in `base.include_plates` are owned by
+the random pipeline: after sampling they are either present as sampled
+`custom_sphere_descriptors` or absent if the selector drops them. They are never
+silently regenerated as deterministic plates. Non-contrast plates such as `:water`
+and, by default, `:fiducials` stay deterministic, so the water cutout still works.
+
+### Sampler contracts
+
+Every sampler field is duck-typed — a `Distributions.jl` object, a constant, a
+closure, or a callable struct all work.
+
+- **Material sampler** `(rng, d, ctx) -> result`, where `result` is a
+  `NamedTuple` of `T1`/`T2`/`T2s`/`ρ`/`delta_w` overrides, a full
+  `SphereDescriptor`, or `nothing` (keep nominal). `ctx` carries
+  `plate`, `index`, `label`, `field`, etc.
+- **Sphere selector** `nothing` (all), an `Integer`/range (pooled count), a
+  `Dict`/[`SphereCountPerPlate`](@ref) (per-plate counts), or a callable
+  `(rng, descriptors_by_plate, base) -> selected_by_plate`.
+- **Pose sampler** `(rng, base) -> (; rotation, translation_mm)`. Built-ins:
+  [`FixedPose`](@ref), [`InPlanePoseSampler`](@ref), [`GaussianEulerPose`](@ref).
+
+### Declarative material sampler
+
+For experiments that need different distributions per plate / sphere / label,
+[`MaterialDistributionSampler`](@ref) is a declarative alternative to a hand-written
+closure. Property specs resolve recursively through [`PerLabel`](@ref),
+[`PerPlate`](@ref), and [`PerSphere`](@ref) (indexed by the stable label index),
+bottoming out at a constant, a distribution, a `(rng, d, ctx)` function, or a
+derived helper ([`PreserveNominalRatio`](@ref), [`ScaledFrom`](@ref)). Properties
+are evaluated in per-sphere dependency order, with cycle detection.
+
+```julia
+material = MaterialDistributionSampler(
+    T1 = PerPlate(:T1 => Uniform(0.3, 2.5),
+                  :T2 => ScaledFrom(:T2, Truncated(Normal(10.0, 1.0), 0.1, Inf))),
+    T2 = PerPlate(:T1 => PreserveNominalRatio(:T2, :T1),
+                  :T2 => Uniform(0.02, 0.10)),
+    ρ  = Truncated(Normal(1.0, 0.02), 0.0, 1.0),
+)
+```
+
+### Train/eval split
+
+Keep training and evaluation seeds **disjoint** and reuse a fixed evaluation pool
+so the agent is never evaluated on a configuration it trained on:
+
+```julia
+eval_pool = eval_episodes(rp, 1:200)     # held-out; draw training seeds >= 10_000
+```

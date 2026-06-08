@@ -37,6 +37,7 @@ include("sphere_descriptor.jl")
 include("config.jl")
 include("augment.jl")
 include("builder.jl")
+include("random_phantom.jl")
 
 # --- sequences, fitting, baseline experiments -----------------------------
 include("sequences/blocks.jl")
@@ -84,6 +85,13 @@ export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        build_phantom_from_descriptors,
        sphere_descriptors, all_sphere_descriptors,
        with_sphere_relaxation,
+       # random phantom (domain randomisation)
+       RandomPhantomConfig, RandomPhantomEpisode,
+       sample_phantom_config, sample_phantom, eval_episodes,
+       FixedPose, InPlanePoseSampler, GaussianEulerPose,
+       E2SphereSelector, SphereCountPerPlate, RatioPreservingLogNormalT1,
+       MaterialDistributionSampler,
+       PerLabel, PerPlate, PerSphere, PreserveNominalRatio, ScaledFrom,
        transform_descriptor, transform_descriptors,
        sphere_descriptor_pixel, sphere_descriptor_pixels,
        voxelise_sphere, sphere_volume,

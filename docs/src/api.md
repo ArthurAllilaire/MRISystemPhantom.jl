@@ -30,6 +30,28 @@ sphere_descriptor_pixel
 sphere_descriptor_pixels
 ```
 
+## Random phantoms (domain randomisation)
+
+```@docs
+RandomPhantomConfig
+RandomPhantomEpisode
+sample_phantom_config
+sample_phantom
+eval_episodes
+FixedPose
+InPlanePoseSampler
+GaussianEulerPose
+E2SphereSelector
+SphereCountPerPlate
+RatioPreservingLogNormalT1
+MaterialDistributionSampler
+PerLabel
+PerPlate
+PerSphere
+PreserveNominalRatio
+ScaledFrom
+```
+
 ## Sequences
 
 ```@docs
