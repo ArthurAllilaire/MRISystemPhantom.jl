@@ -8,8 +8,8 @@ using Test
 using Random
 using MRISystemPhantom
 
-# Internal refinement helper (not exported), reached the same way
-# test_e2_imaging.jl reaches _e2_simulate_step.
+# Internal refinement helper (not exported), reached explicitly for regression
+# coverage.
 const _refine_alpha = MRISystemPhantom.refine_coordinate_descent_alpha
 
 @testset "α-aware CR-optimal + Ernst" begin
