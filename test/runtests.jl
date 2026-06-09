@@ -1,5 +1,7 @@
 using Test
 using Random
+using LinearAlgebra
+using Statistics
 using MRISystemPhantom
 using KomaMRI
 

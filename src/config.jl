@@ -25,6 +25,17 @@ Base.@kwdef struct AugmentConfig
 end
 
 """
+    PoseRotation
+
+A phantom orientation, either intrinsic XYZ Euler angles (radians) as an
+`NTuple{3,Float64}` or a pre-built 3×3 rotation matrix (`Matrix{Float64}`). A
+matrix lets pose samplers express orientations that Euler angles cannot sample
+uniformly (see [`UniformSO3PoseSampler`](@ref)). Both are consumed by
+[`apply_transform!`](@ref) and [`transform_descriptor`](@ref).
+"""
+const PoseRotation = Union{NTuple{3,Float64},Matrix{Float64}}
+
+"""
     PhantomConfig
 
 Single contract between the RL training loop and the builder. Everything the
@@ -37,7 +48,7 @@ Base.@kwdef struct PhantomConfig
     include_plates::Vector{Symbol}    = [:T1, :T2, :PD, :fiducials, :water]
     serial_number_class::Symbol       = :new           # :new (≥0042) or :legacy
     temperature_C::Float64            = 20.0
-    rotation::NTuple{3,Float64}       = (0.0, 0.0, 0.0)   # Euler XYZ rad
+    rotation::PoseRotation            = (0.0, 0.0, 0.0)   # Euler XYZ rad, or 3×3 matrix
     translation_mm::NTuple{3,Float64} = (0.0, 0.0, 0.0)
     augment::AugmentConfig            = AugmentConfig()
     rng_seed::Int                     = 0

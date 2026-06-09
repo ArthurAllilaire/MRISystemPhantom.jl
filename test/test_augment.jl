@@ -22,6 +22,48 @@ using LinearAlgebra: I, det
         @test isapprox(sort(r_before), sort(r_after); atol = 1e-9)
     end
 
+    @testset "apply_transform! matrix method" begin
+        # Probe phantom: rotate via the matrix method and the Euler method, and
+        # confirm they agree and match a hand-rotated point.
+        obj  = build_phantom(cfg_nojitter)
+        x0, y0, z0 = copy(obj.x), copy(obj.y), copy(obj.z)
+
+        # identity matrix is a no-op
+        objI = build_phantom(cfg_nojitter)
+        apply_transform!(objI, Matrix(1.0I, 3, 3), (0.0, 0.0, 0.0))
+        @test objI.x == x0 && objI.y == y0 && objI.z == z0
+
+        # matrix method matches the equivalent Euler method
+        euler = (0.3, -0.7, 1.1)
+        objE = build_phantom(cfg_nojitter)
+        objM = build_phantom(cfg_nojitter)
+        apply_transform!(objE, euler, (1e-3, -2e-3, 3e-3))
+        apply_transform!(objM, rotation_matrix(euler...), (1e-3, -2e-3, 3e-3))
+        @test objE.x ≈ objM.x && objE.y ≈ objM.y && objE.z ≈ objM.z
+
+        # a known 90° z-rotation maps (x,y,z) -> (-y, x, z)
+        obj90 = build_phantom(cfg_nojitter)
+        apply_transform!(obj90, rotation_matrix(0.0, 0.0, π/2), (0.0, 0.0, 0.0))
+        @test obj90.x ≈ -y0 && obj90.y ≈ x0 && obj90.z ≈ z0
+
+        # non-3×3 matrix throws a clear error
+        @test_throws ArgumentError apply_transform!(build_phantom(cfg_nojitter),
+                                                    Matrix(1.0I, 2, 2), (0.0, 0.0, 0.0))
+    end
+
+    @testset "matrix rotation config matches Euler config" begin
+        # build_phantom with cfg.rotation as a matrix reproduces the Euler config
+        euler = (deg2rad(20.0), 0.0, deg2rad(10.0))
+        cfgE = PhantomConfig(voxel_size_mm = 3.0, include_plates = [:T1],
+                             rotation = euler, translation_mm = (3.0, -2.0, 5.0))
+        cfgM = PhantomConfig(voxel_size_mm = 3.0, include_plates = [:T1],
+                             rotation = rotation_matrix(euler...),
+                             translation_mm = (3.0, -2.0, 5.0))
+        objE = build_phantom(cfgE)
+        objM = build_phantom(cfgM)
+        @test objE.x ≈ objM.x && objE.y ≈ objM.y && objE.z ≈ objM.z
+    end
+
     @testset "translation shifts all spins" begin
         cfg_t = PhantomConfig(voxel_size_mm = 3.0, include_plates = [:T1],
                               translation_mm = (10.0, -5.0, 2.0))

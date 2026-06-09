@@ -225,12 +225,30 @@ end
 
 # --- pose sampling --------------------------------------------------------
 
+# Normalise whatever a pose sampler returns into a `PoseRotation`: 3 Euler angles
+# (tuple or 3-vector) stay Euler; a 3×3 matrix is copied to `Matrix{Float64}`.
+_coerce_rotation(r::NTuple{3,Float64})      = r
+_coerce_rotation(r::NTuple{3,<:Real})       = NTuple{3,Float64}(r)
+_coerce_rotation(r::AbstractMatrix{<:Real}) =
+    size(r) == (3, 3) ? Matrix{Float64}(r) :
+        throw(ArgumentError("pose rotation matrix must be 3×3, got $(size(r))"))
+function _coerce_rotation(r::AbstractVector{<:Real})
+    length(r) == 3 || throw(ArgumentError(
+        "pose rotation vector must have 3 Euler angles, got length $(length(r))"))
+    NTuple{3,Float64}(r)
+end
+_coerce_rotation(r) = throw(ArgumentError(
+    "unsupported pose rotation $(typeof(r)); expected 3 Euler angles or a 3×3 matrix"))
+
+_copy_rotation(r::NTuple{3,Float64}) = r
+_copy_rotation(r::Matrix{Float64}) = copy(r)
+
 function _apply_pose(rng::AbstractRNG, sampler, base::PhantomConfig)
-    sampler === nothing && return (base.rotation, base.translation_mm)
+    sampler === nothing && return (_coerce_rotation(base.rotation), base.translation_mm)
     res = sampler(rng, base)
     rotation       = get(res, :rotation, base.rotation)
     translation_mm = get(res, :translation_mm, base.translation_mm)
-    (NTuple{3,Float64}(rotation), NTuple{3,Float64}(translation_mm))
+    (_coerce_rotation(rotation), NTuple{3,Float64}(translation_mm))
 end
 
 # --- top-level sampling ---------------------------------------------------
@@ -319,7 +337,7 @@ function sample_phantom_config(rpcfg::RandomPhantomConfig; rng_seed::Integer = r
         descriptors_sampled     = sampled_by_plate,
         active_labels,
         active_indices_by_plate,
-        rotation,
+        rotation = _copy_rotation(rotation),
         translation_mm,
         episode_seed,
         build_seed)
@@ -354,12 +372,14 @@ eval_episodes(rpcfg::RandomPhantomConfig, seeds) =
 """
     FixedPose(; rotation = nothing, translation_mm = nothing)
 
-Pose sampler that keeps a fixed pose. `nothing` fields fall back to the base
-config's pose.
+Pose sampler that keeps a fixed pose. `rotation` may be Euler angles
+(`NTuple{3,Float64}`) or a 3×3 matrix; `nothing` fields fall back to the base
+config's pose. Useful for pinning a fixed oblique pose, e.g. replaying a single
+[`UniformSO3PoseSampler`](@ref) draw.
 """
 Base.@kwdef struct FixedPose
-    rotation::Union{Nothing,NTuple{3,Float64}}       = nothing
-    translation_mm::Union{Nothing,NTuple{3,Float64}} = nothing
+    rotation::Union{Nothing,NTuple{3,Float64},Matrix{Float64}} = nothing
+    translation_mm::Union{Nothing,NTuple{3,Float64}}           = nothing
 end
 (p::FixedPose)(::AbstractRNG, base::PhantomConfig) =
     (; rotation = something(p.rotation, base.rotation),
@@ -388,8 +408,9 @@ end
     GaussianEulerPose(; rotation_sigma_rad = 0.0, translation_sigma_mm = 0.0)
 
 Gaussian perturbation of all three Euler angles and all three translation axes.
-Note this is *not* a uniform `SO(3)` orientation; for true uniform orientation a
-dedicated `UniformSO3PoseSampler` (random unit quaternion) should be added later.
+Note this is *not* a uniform `SO(3)` orientation; for true uniform orientation
+use [`UniformSO3PoseSampler`](@ref) (random unit quaternion), not a wide-σ
+`GaussianEulerPose`.
 """
 Base.@kwdef struct GaussianEulerPose
     rotation_sigma_rad::Float64   = 0.0
@@ -398,6 +419,29 @@ end
 function (p::GaussianEulerPose)(rng::AbstractRNG, ::PhantomConfig)
     σr, σt = p.rotation_sigma_rad, p.translation_sigma_mm
     (; rotation = (σr * randn(rng), σr * randn(rng), σr * randn(rng)),
+       translation_mm = (σt * randn(rng), σt * randn(rng), σt * randn(rng)))
+end
+
+"""
+    UniformSO3PoseSampler(; translation_sigma_mm = 0.0)
+
+Uniform orientation on `SO(3)` via a random unit quaternion
+(`rand(rng, QuatRotation)`), returned as a 3×3 rotation matrix. This is the
+*correct* uniform-orientation sampler; [`GaussianEulerPose`](@ref) is a local
+perturbation and is **not** uniform on `SO(3)`.
+
+Intended for volumetric / oblique-pose experiments, **not** the sliced E2
+environment: a uniform orientation tilts spheres out of a thin axial slab. With
+`translation_sigma_mm = 0` (the default) the pose is a pure rotation; a positive
+value adds independent Gaussian translation on all three axes.
+"""
+Base.@kwdef struct UniformSO3PoseSampler
+    translation_sigma_mm::Float64 = 0.0
+end
+function (p::UniformSO3PoseSampler)(rng::AbstractRNG, ::PhantomConfig)
+    R  = Matrix{Float64}(rand(rng, QuatRotation{Float64}))   # uniform on SO(3)
+    σt = p.translation_sigma_mm
+    (; rotation = R,
        translation_mm = (σt * randn(rng), σt * randn(rng), σt * randn(rng)))
 end
 

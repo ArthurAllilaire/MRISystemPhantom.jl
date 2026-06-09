@@ -15,6 +15,7 @@ using KomaMRI
 using FFTW
 using Random
 using LinearAlgebra
+using Rotations
 import Suppressor
 import Statistics
 import Statistics: mean
@@ -91,7 +92,7 @@ export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        # random phantom (domain randomisation)
        RandomPhantomConfig, RandomPhantomEpisode,
        sample_phantom_config, sample_phantom, eval_episodes,
-       FixedPose, InPlanePoseSampler, GaussianEulerPose,
+       FixedPose, InPlanePoseSampler, GaussianEulerPose, UniformSO3PoseSampler,
        E2SphereSelector, SphereCountPerPlate, RatioPreservingLogNormalT1,
        MaterialDistributionSampler,
        PerLabel, PerPlate, PerSphere, PreserveNominalRatio, ScaledFrom,

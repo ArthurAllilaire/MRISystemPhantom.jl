@@ -180,6 +180,49 @@ _nominal_for(truth, plate, label) =
         @test sample_phantom_config(rpf; rng_seed = 1).cfg.rotation == (0.1, 0.2, 0.3)
     end
 
+    @testset "uniform SO(3) pose sampling" begin
+        rp = RandomPhantomConfig(base = FAST,
+                                 pose_sampler = UniformSO3PoseSampler())
+
+        # rotation is stored as a 3×3 Float64 matrix and is a valid rotation
+        ep = sample_phantom_config(rp; rng_seed = 7)
+        R = ep.cfg.rotation
+        @test R isa Matrix{Float64}
+        @test size(R) == (3, 3)
+        @test isapprox(transpose(R) * R, Matrix(I, 3, 3); atol = 1e-10)
+        @test isapprox(det(R), 1.0; atol = 1e-10)
+        @test ep.truth.rotation == R             # truth records the matrix value
+        @test ep.truth.rotation !== R            # but not the exposed mutable object
+
+        # deterministic: same seed ⇒ identical matrix and built phantom
+        ep2 = sample_phantom_config(rp; rng_seed = 7)
+        @test ep2.cfg.rotation == R
+        obj_a = build_phantom(ep.cfg)
+        obj_b = build_phantom(ep2.cfg)
+        @test obj_a.x == obj_b.x && obj_a.y == obj_b.y && obj_a.z == obj_b.z
+
+        # different seeds ⇒ different orientations
+        @test sample_phantom_config(rp; rng_seed = 8).cfg.rotation != R
+
+        # loose uniformity: mean of R*ẑ over many samples is near zero
+        Rs = [sample_phantom_config(rp; rng_seed = s).cfg.rotation for s in 1:3000]
+        mv = sum(R -> R[:, 3], Rs) ./ length(Rs)
+        @test all(abs.(mv) .< 0.1)
+
+        # translation_sigma_mm = 0 ⇒ pure rotation
+        @test ep.cfg.translation_mm == (0.0, 0.0, 0.0)
+        rpt = RandomPhantomConfig(base = FAST,
+            pose_sampler = UniformSO3PoseSampler(translation_sigma_mm = 2.0))
+        @test sample_phantom_config(rpt; rng_seed = 1).cfg.translation_mm != (0.0, 0.0, 0.0)
+    end
+
+    @testset "FixedPose carries a matrix rotation" begin
+        R = rotation_matrix(deg2rad(20.0), 0.0, deg2rad(10.0))
+        rp = RandomPhantomConfig(base = PhantomConfig(voxel_size_mm = 4.0),
+                                 pose_sampler = FixedPose(rotation = R))
+        @test sample_phantom_config(rp; rng_seed = 1).cfg.rotation == R
+    end
+
     @testset "water cutout uses sampled custom descriptors" begin
         # Sampled spheres get a jittered T1 that differs from bulk water T1, so
         # T1 distinguishes a sphere spin from a water spin. If the water cutout

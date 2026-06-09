@@ -4,6 +4,7 @@
 
 ```@docs
 PhantomConfig
+MRISystemPhantom.PoseRotation
 AugmentConfig
 SphereDescriptor
 scanner_for_field
@@ -41,6 +42,7 @@ eval_episodes
 FixedPose
 InPlanePoseSampler
 GaussianEulerPose
+UniformSO3PoseSampler
 E2SphereSelector
 SphereCountPerPlate
 RatioPreservingLogNormalT1

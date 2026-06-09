@@ -12,20 +12,29 @@ function rotation_matrix(α::Real, β::Real, γ::Real)
 end
 
 """
-    apply_transform!(obj, euler, translation)
+    apply_transform!(obj, rotation, translation)
 
-Rotate every spin position of `obj` by the given Euler angles (radians)
-and then translate by `translation` (metres). Returns the same phantom
-(positions are mutated in place).
+Rotate every spin position of `obj` by `rotation` — either Euler angles
+(radians) as an `NTuple{3,<:Real}` or a 3×3 rotation matrix — and then translate
+by `translation` (metres). Returns the same phantom (positions are mutated in
+place).
 """
-function apply_transform!(obj, euler::NTuple{3,<:Real}, translation::NTuple{3,<:Real})
+apply_transform!(obj, euler::NTuple{3,<:Real}, translation::NTuple{3,<:Real}) =
+    apply_transform!(obj, rotation_matrix(euler...), translation)
+
+function apply_transform!(obj, R::AbstractMatrix{<:Real}, translation::NTuple{3,<:Real})
+    size(R) == (3, 3) || throw(ArgumentError(
+        "apply_transform! rotation matrix must be 3×3, got $(size(R))"))
     length(obj.x) == 0 && return obj
-    R = rotation_matrix(euler...)
+    r11, r12, r13 = R[1, 1], R[1, 2], R[1, 3]
+    r21, r22, r23 = R[2, 1], R[2, 2], R[2, 3]
+    r31, r32, r33 = R[3, 1], R[3, 2], R[3, 3]
+    tx, ty, tz = translation
     @inbounds for i in eachindex(obj.x)
-        v = R * [obj.x[i], obj.y[i], obj.z[i]]
-        obj.x[i] = v[1] + translation[1]
-        obj.y[i] = v[2] + translation[2]
-        obj.z[i] = v[3] + translation[3]
+        x, y, z = obj.x[i], obj.y[i], obj.z[i]
+        obj.x[i] = r11 * x + r12 * y + r13 * z + tx
+        obj.y[i] = r21 * x + r22 * y + r23 * z + ty
+        obj.z[i] = r31 * x + r32 * y + r33 * z + tz
     end
     obj
 end
