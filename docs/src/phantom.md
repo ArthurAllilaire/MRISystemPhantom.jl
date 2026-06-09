@@ -198,6 +198,44 @@ phantom = build_phantom(episode.cfg)   # safe to show the agent
 # episode.truth holds the hidden ground truth — keep it out of the observation
 ```
 
+[`plot_random_phantom_explorer_html`](@ref) bakes several pre-sampled episodes
+into one self-contained page. Drag the **episode** slider (or hit ▶ Resample) to
+load a fresh random phantom and watch the rotation, sphere subset and sampled
+materials change; switch the **colour-by** dropdown between `T1`/`T2`/`T2s`/`ρ`/`Δw`,
+fade the background with the **water-opacity** slider, and read the exact
+distribution off the bottom-right info box. See `examples/explore_random_phantom.jl`.
+
+```@raw html
+<div class="phantom-viewer-frame">
+  <iframe
+    id="random-phantom-explorer-3d"
+    title="Interactive explorer of resampled random phantoms"
+    width="100%"
+    height="760"
+    loading="lazy"
+    style="border:1px solid #d8dee4; border-radius:6px; background:white;"
+    allowfullscreen>
+  </iframe>
+</div>
+<p>
+  <a id="random-phantom-explorer-3d-link" href="assets/random_phantom_explorer.html" target="_blank" rel="noopener">
+    Open the random-phantom explorer in a full page
+  </a>
+</p>
+<script>
+(function () {
+  var frame = document.getElementById("random-phantom-explorer-3d");
+  var link = document.getElementById("random-phantom-explorer-3d-link");
+  if (!frame || !link) return;
+  var asset = "random_phantom_explorer.html";
+  var base = window.location.pathname.endsWith("/") ? "../assets/" : "assets/";
+  var src = base + asset;
+  frame.src = src;
+  link.href = src;
+})();
+</script>
+```
+
 The returned [`RandomPhantomEpisode`](@ref) carries `cfg` (an ordinary
 deterministic config) and a hidden `truth` record (`descriptors_sampled`,
 `active_labels`, `active_indices_by_plate`, pose, `episode_seed`, `build_seed`).

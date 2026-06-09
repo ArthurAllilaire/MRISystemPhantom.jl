@@ -95,28 +95,69 @@ using KomaMRI
                                                           opacity_sliders = :bogus)
         end
 
-        @testset "random phantom explorer: one frame per seed" begin
+        @testset "random phantom explorer: frames + property/opacity controls" begin
             rpcfg = RandomPhantomConfig(
-                base = PhantomConfig(voxel_size_mm = 4.0, include_plates = [:T1, :water],
+                base = PhantomConfig(voxel_size_mm = 4.0,
+                                     include_plates = [:T1, :T2, :PD, :water],
                                      water_voxel_size_mm = 6.0),
-                sphere_selector  = SphereCountPerPlate(:T1 => 5),
+                sphere_selector  = SphereCountPerPlate(:T1 => 5, :T2 => 3, :PD => 2),
                 material_sampler = RatioPreservingLogNormalT1(0.2),
                 pose_sampler     = InPlanePoseSampler(rotation_sigma_rad = 0.1))
-            fig = plot_random_phantom_explorer_html(rpcfg; seeds = 1:3)
+            props = (:T1, :T2, :T2s, :ρ, :Δw)
+            fig = plot_random_phantom_explorer_html(rpcfg; seeds = 1:3, color_by = :T2)
             @test fig isa PlotlyJS.SyncPlot
-            # fixed two-trace layout, water under spheres
-            @test [t[:name] for t in fig.plot.data] == ["water", "spheres"]
-            # one frame per seed, each updating both traces
+
+            # water trace + one sphere trace per property; only color_by visible
+            d = fig.plot.data
+            @test d[1][:name] == "water"
+            @test length(d) == 1 + length(props)
+            @test [get(t, :visible, true) for t in d] ==
+                  [true; [p === :T2 for p in props]]
+            @test all(t -> t[:marker][:coloraxis] == "coloraxis", d[2:end])
+
+            # one frame per seed, each updating every trace
             @test length(fig.plot.frames) == 3
-            @test fig.plot.frames[1][:traces] == [0, 1]
-            # slider has one step per seed; Resample/Pause buttons present
-            @test length(fig.plot.layout[:sliders][1][:steps]) == 3
-            @test [b[:label] for b in fig.plot.layout[:updatemenus][1][:buttons]] ==
+            @test fig.plot.frames[1][:traces] == collect(0:length(props))
+
+            # colour-by dropdown toggles which sphere trace is visible
+            colour_menu = fig.plot.layout[:updatemenus][1]
+            @test [b[:label] for b in colour_menu[:buttons]] ==
+                  ["T1", "T2", "T2s", "ρ", "Δw"]
+            t2s_btn = colour_menu[:buttons][3]
+            @test t2s_btn[:args][1]["visible"] == [p === :T2s for p in props]
+            @test t2s_btn[:args][3] == collect(1:length(props))
+            @test t2s_btn[:args][2]["coloraxis.colorbar.title.text"] == "T2s"
+
+            # Resample/Pause buttons
+            @test [b[:label] for b in fig.plot.layout[:updatemenus][2][:buttons]] ==
                   ["▶ Resample", "⏸ Pause"]
-            # spheres share the colour axis; shared cmin/cmax across episodes
-            @test fig.plot.data[2][:marker][:coloraxis] == "coloraxis"
-            @test fig.plot.layout[:coloraxis][:cmin] <= fig.plot.layout[:coloraxis][:cmax]
+
+            # two sliders: episode (one step per seed) + water opacity
+            sliders = fig.plot.layout[:sliders]
+            @test length(sliders) == 2
+            @test sliders[1][:currentvalue][:prefix] == "episode (seed): "
+            @test length(sliders[1][:steps]) == 3
+            @test sliders[2][:currentvalue][:prefix] == "water opacity: "
+            @test sliders[2][:steps][end][:args][1]["marker.opacity"] == 1.0
+            @test sliders[2][:steps][end][:args][2] == [0]   # targets water trace
+
+            @test fig.plot.layout[:coloraxis][:colorbar][:title][:text] == "T2"
             @test occursin("seed 1", fig.plot.layout[:title][:text])
+
+            # static config box reports the sampler + base metadata
+            box = fig.plot.layout[:annotations][1][:text]
+            @test occursin("RandomPhantomConfig", box)
+            @test occursin("SphereCountPerPlate", box)            # selector
+            @test occursin("RatioPreservingLogNormalT1", box)     # material
+            @test occursin("InPlanePoseSampler", box)             # pose
+            @test occursin("base PhantomConfig", box)
+            @test occursin("plates: T1, T2, PD, water", box)
+            # box sits bottom-right and has a show/hide toggle
+            ann = fig.plot.layout[:annotations][1]
+            @test ann[:xanchor] == "right" && ann[:yanchor] == "bottom"
+            toggle = fig.plot.layout[:updatemenus][3]
+            @test [b[:label] for b in toggle[:buttons]] == ["ⓘ Info", "Hide"]
+            @test toggle[:buttons][2][:args][1]["annotations[0].visible"] == false
 
             @test_throws ErrorException plot_random_phantom_explorer_html(rpcfg; seeds = Int[])
         end

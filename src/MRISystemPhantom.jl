@@ -88,21 +88,30 @@ end
     plot_random_phantom_explorer_html(rpcfg::RandomPhantomConfig; seeds = 1:10, kwargs...)
 
 Pre-sample one episode per seed from `rpcfg` and bake them all into a single
-self-contained interactive HTML. A Plotly slider (plus Play/Pause) scrubs through
-the pre-sampled episodes — dragging it acts as a "resample" button that loads a
-fresh random phantom, so rotation, subset selection, and material sampling can be
-seen to vary. Because every episode is precomputed and embedded, the result needs
-no running Julia and works offline (ideal for a presentation).
+self-contained interactive HTML. An episode slider (plus ▶ Resample / ⏸ Pause)
+scrubs through the pre-sampled episodes — dragging it acts as a "resample" button
+that loads a fresh random phantom, so rotation, subset selection, and material
+sampling can be seen to vary. Because every episode is precomputed and embedded,
+the result needs no running Julia and works offline (ideal for a presentation).
 
-Each episode collapses to two traces: the randomised spheres (coloured by
-`color_by`, on a shared colour axis so episodes are comparable) and a translucent
-background-water trace. The per-episode title reports the seed, the active sphere
-count, and a rotation summary.
+Controls (all client-side, no server):
+
+  - **episode slider** + Resample/Pause — step through the pre-sampled episodes;
+  - **colour-by dropdown** — switch the sphere colouring between `properties`
+    (`T1`, `T2`, `T2s`, `ρ`, `Δw`), each on its own shared-across-episodes range;
+  - **water-opacity slider** — fade the translucent background water in/out.
+
+The per-episode title reports the seed, the active sphere count, and a rotation
+summary. Spheres ride a shared colour axis (one trace per property, toggled by the
+dropdown); water is a separate translucent trace.
 
 This is implemented in the PlotlyJS extension; call it after `using PlotlyJS` (or
-a package that loads it). Keyword arguments: `seeds`, `color_by`,
+a package that loads it). Keyword arguments: `seeds`, `properties`, `color_by`,
 `max_water_points`, `max_sphere_points`, `water_opacity`, `sphere_size`,
 `height`, `play_ms`, and `file` (when set, the figure is also written there).
+
+Note: the explorer holds one sphere trace per property, so sphere spins are baked
+~`length(properties)`× — prefer coarse `voxel_size_mm` to keep the file small.
 """
 function plot_random_phantom_explorer_html(args...; kwargs...)
     error("plot_random_phantom_explorer_html requires PlotlyJS. Load PlotlyJS, or " *
