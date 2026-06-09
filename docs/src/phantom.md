@@ -264,15 +264,15 @@ closure, or a callable struct all work.
   rotation matrix. Built-ins: [`FixedPose`](@ref), [`InPlanePoseSampler`](@ref),
   [`GaussianEulerPose`](@ref), [`UniformSO3PoseSampler`](@ref).
 
-    !!! warning "In-plane vs volumetric"
-        [`UniformSO3PoseSampler`](@ref) draws a *true* uniform orientation on
-        `SO(3)` (random unit quaternion). [`GaussianEulerPose`](@ref) is a small
-        local perturbation and is **not** uniform on `SO(3)` — do not use it as an
-        approximation. A uniform orientation tilts spheres out of a thin axial
-        slab, so the sliced E2 environment must keep using
-        [`InPlanePoseSampler`](@ref) (in-plane rotation + x/y translation);
-        reserve `UniformSO3PoseSampler` for volumetric observation. This is a
-        per-experiment choice, deliberately not enforced at runtime.
+!!! warning "In-plane vs volumetric"
+    [`UniformSO3PoseSampler`](@ref) draws a *true* uniform orientation on
+    `SO(3)` (random unit quaternion). [`GaussianEulerPose`](@ref) is a small
+    local perturbation and is **not** uniform on `SO(3)` — do not use it as an
+    approximation. A uniform orientation tilts spheres out of a thin axial
+    slab, so the sliced E2 environment must keep using
+    [`InPlanePoseSampler`](@ref) (in-plane rotation + x/y translation);
+    reserve `UniformSO3PoseSampler` for volumetric observation. This is a
+    per-experiment choice, deliberately not enforced at runtime.
 
 ### Declarative material sampler
 
