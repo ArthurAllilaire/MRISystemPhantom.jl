@@ -94,5 +94,46 @@ using KomaMRI
             @test_throws ErrorException plot_phantom_html(PhantomConfig(voxel_size_mm = 4.0);
                                                           opacity_sliders = :bogus)
         end
+
+        @testset "random phantom explorer: one frame per seed" begin
+            rpcfg = RandomPhantomConfig(
+                base = PhantomConfig(voxel_size_mm = 4.0, include_plates = [:T1, :water],
+                                     water_voxel_size_mm = 6.0),
+                sphere_selector  = SphereCountPerPlate(:T1 => 5),
+                material_sampler = RatioPreservingLogNormalT1(0.2),
+                pose_sampler     = InPlanePoseSampler(rotation_sigma_rad = 0.1))
+            fig = plot_random_phantom_explorer_html(rpcfg; seeds = 1:3)
+            @test fig isa PlotlyJS.SyncPlot
+            # fixed two-trace layout, water under spheres
+            @test [t[:name] for t in fig.plot.data] == ["water", "spheres"]
+            # one frame per seed, each updating both traces
+            @test length(fig.plot.frames) == 3
+            @test fig.plot.frames[1][:traces] == [0, 1]
+            # slider has one step per seed; Resample/Pause buttons present
+            @test length(fig.plot.layout[:sliders][1][:steps]) == 3
+            @test [b[:label] for b in fig.plot.layout[:updatemenus][1][:buttons]] ==
+                  ["▶ Resample", "⏸ Pause"]
+            # spheres share the colour axis; shared cmin/cmax across episodes
+            @test fig.plot.data[2][:marker][:coloraxis] == "coloraxis"
+            @test fig.plot.layout[:coloraxis][:cmin] <= fig.plot.layout[:coloraxis][:cmax]
+            @test occursin("seed 1", fig.plot.layout[:title][:text])
+
+            @test_throws ErrorException plot_random_phantom_explorer_html(rpcfg; seeds = Int[])
+        end
+
+        @testset "explorer HTML round-trips to disk" begin
+            rpcfg = RandomPhantomConfig(
+                base = PhantomConfig(voxel_size_mm = 4.0, include_plates = [:T1, :water],
+                                     water_voxel_size_mm = 6.0),
+                sphere_selector = SphereCountPerPlate(:T1 => 4))
+            path = tempname() * ".html"
+            try
+                plot_random_phantom_explorer_html(rpcfg; seeds = 1:2, file = path)
+                @test isfile(path)
+                @test filesize(path) > 0
+            finally
+                isfile(path) && rm(path)
+            end
+        end
     end
 end

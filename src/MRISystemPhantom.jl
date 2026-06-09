@@ -84,6 +84,31 @@ function plot_phantom_html(args...; kwargs...)
           "that loads PlotlyJS, before calling plot_phantom_html.")
 end
 
+"""
+    plot_random_phantom_explorer_html(rpcfg::RandomPhantomConfig; seeds = 1:10, kwargs...)
+
+Pre-sample one episode per seed from `rpcfg` and bake them all into a single
+self-contained interactive HTML. A Plotly slider (plus Play/Pause) scrubs through
+the pre-sampled episodes — dragging it acts as a "resample" button that loads a
+fresh random phantom, so rotation, subset selection, and material sampling can be
+seen to vary. Because every episode is precomputed and embedded, the result needs
+no running Julia and works offline (ideal for a presentation).
+
+Each episode collapses to two traces: the randomised spheres (coloured by
+`color_by`, on a shared colour axis so episodes are comparable) and a translucent
+background-water trace. The per-episode title reports the seed, the active sphere
+count, and a rotation summary.
+
+This is implemented in the PlotlyJS extension; call it after `using PlotlyJS` (or
+a package that loads it). Keyword arguments: `seeds`, `color_by`,
+`max_water_points`, `max_sphere_points`, `water_opacity`, `sphere_size`,
+`height`, `play_ms`, and `file` (when set, the figure is also written there).
+"""
+function plot_random_phantom_explorer_html(args...; kwargs...)
+    error("plot_random_phantom_explorer_html requires PlotlyJS. Load PlotlyJS, or " *
+          "another package that loads PlotlyJS, before calling it.")
+end
+
 export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        build_phantom, build_plate, build_sphere, build_background_water,
        build_phantom_from_descriptors,
@@ -148,6 +173,6 @@ export PhantomConfig, AugmentConfig, SphereDescriptor, scanner_for_field,
        pooled_image_snr_report, multi_block_snr_report_to_dict,
        print_snr_report, snr_report_to_dict,
        # interactive 3D visualisation (PlotlyJS extension)
-       plot_phantom_html
+       plot_phantom_html, plot_random_phantom_explorer_html
 
 end # module

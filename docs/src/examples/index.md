@@ -18,6 +18,7 @@ julia --project=. examples/<name>.jl
 | `hamming_apodisation.jl` | Reconstructs a coarse-water phantom with and without a 2-D Hamming window, showing how apodisation suppresses truncation ringing. |
 | `plot_phantom.jl` | Renders interactive full-phantom, plate-slice, vertical-slice and augmented-phantom views with `plot_phantom_html`. |
 | `plot_fidelity_phantoms.jl` | Visualises the water-coarsening fidelity levels of the multi-fidelity curriculum with one interactive viewer per fidelity. |
+| `explore_random_phantom.jl` | Bakes several pre-sampled `RandomPhantomConfig` episodes into one HTML with a slider / ▶ Resample control, so rotation, subset selection and material sampling can be explored offline. |
 | `plot_seqs.jl` | Writes one interactive RF/gradient/ADC waveform plot per sequence into `src/assets/sequences/`: IR-SE (plain and with a crusher & TR-spoiler variant), SE for T2 mapping, IR-TSE echo-train, and spoiled GRE. |
 
 The linked scripts have rendered walkthroughs in the pages below; the rest are

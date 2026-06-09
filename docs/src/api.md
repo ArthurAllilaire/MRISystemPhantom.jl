@@ -109,8 +109,14 @@ dropdown colours spheres by `T1`, `T2`, `T2s`, `ρ`, or `Δw`; pass
 `color_water = true` when water should share that colour axis instead of staying
 a constant translucent trace. See `examples/plot_phantom_3d.jl`.
 
+`plot_random_phantom_explorer_html` pre-samples several episodes from a
+[`RandomPhantomConfig`](@ref) and bakes them into one self-contained HTML with a
+slider (plus a ▶ Resample / ⏸ Pause control) that scrubs through them — a static,
+offline-safe "resample" demo. See `examples/explore_random_phantom.jl`.
+
 ```@docs
 plot_phantom_html
+plot_random_phantom_explorer_html
 ```
 
 ## SNR diagnostics

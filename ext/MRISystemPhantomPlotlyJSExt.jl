@@ -7,9 +7,10 @@
 module MRISystemPhantomPlotlyJSExt
 
 using PlotlyJS
-import MRISystemPhantom: plot_phantom_html
+import MRISystemPhantom: plot_phantom_html, plot_random_phantom_explorer_html
 using MRISystemPhantom: PhantomConfig, SphereDescriptor, build_phantom,
-                        sphere_descriptors, transform_descriptor
+                        sphere_descriptors, transform_descriptor,
+                        RandomPhantomConfig, sample_phantom_config
 using MRISystemPhantom: _mm_to_m
 
 # Friendly legend/title names for each generated plate.
@@ -204,6 +205,136 @@ function plot_phantom_html(cfg::PhantomConfig = PhantomConfig();
         updatemenus = updatemenus, sliders = sliders)
 
     fig = PlotlyJS.plot(traces, layout)
+    file !== nothing && PlotlyJS.savefig(fig, file; format = "html")
+    fig
+end
+
+# ---------------------------------------------------------------------------
+# Random phantom explorer: pre-sampled episodes baked into one animated figure.
+# ---------------------------------------------------------------------------
+
+# All pose-corrected sphere descriptors for a sampled episode (generated plates +
+# the randomised custom spheres), so spins can be split into spheres vs water.
+function _episode_descriptors(cfg::PhantomConfig)
+    translation = _mm_to_m.(cfg.translation_mm)
+    descs = SphereDescriptor[]
+    for plate in (:T1, :T2, :PD, :fiducials)
+        plate in cfg.include_plates || continue
+        append!(descs, sphere_descriptors(plate, cfg))
+    end
+    append!(descs, cfg.custom_sphere_descriptors)
+    [transform_descriptor(d, cfg.rotation, translation) for d in descs]
+end
+
+# Split a built episode into subsampled sphere / water spin indices.
+function _episode_groups(obj, cfg, max_sphere_points, max_water_points)
+    descs = _episode_descriptors(cfg)
+    m = isempty(descs) ? falses(length(obj.x)) : _group_mask(obj, descs)
+    (_subsample(findall(m), max_sphere_points),
+     _subsample(findall(.!m), max_water_points))
+end
+
+# Human-readable rotation summary for the per-episode title.
+_rotation_summary(r::NTuple{3,<:Real}) =
+    "Euler° " * join(string.(round.(rad2deg.(r); digits = 1)), ", ")
+_rotation_summary(::AbstractMatrix) = "SO(3) matrix"
+
+_explorer_title(seed, n_spheres, rotation) =
+    "random phantom — seed $seed — $n_spheres spheres — $(_rotation_summary(rotation))"
+
+# Water + spheres scatter3d pair for one episode (fixed two-trace layout so frames
+# only swap arrays). Spheres ride the shared colour axis; water is translucent.
+function _explorer_traces(obj, s_idx, w_idx, color_by, water_opacity, sphere_size)
+    cvals = getproperty(obj, color_by)
+    water = PlotlyJS.scatter3d(
+        x = obj.x[w_idx], y = obj.y[w_idx], z = obj.z[w_idx],
+        mode = "markers", name = "water",
+        customdata = _hover_data(obj, w_idx), hovertemplate = _HOVER_TEMPLATE,
+        marker = PlotlyJS.attr(size = 1.5, color = "lightblue", opacity = water_opacity))
+    spheres = PlotlyJS.scatter3d(
+        x = obj.x[s_idx], y = obj.y[s_idx], z = obj.z[s_idx],
+        mode = "markers", name = "spheres",
+        customdata = _hover_data(obj, s_idx), hovertemplate = _HOVER_TEMPLATE,
+        marker = PlotlyJS.attr(size = sphere_size, color = cvals[s_idx],
+                               coloraxis = "coloraxis"))
+    (water, spheres)
+end
+
+function plot_random_phantom_explorer_html(rpcfg::RandomPhantomConfig;
+        seeds = 1:10,
+        color_by::Symbol = :T1,
+        # Caps are per-episode and every episode is baked into the file, so keep
+        # them well below the single-figure viewer to keep the HTML small/snappy.
+        max_water_points::Int = 12_000,
+        max_sphere_points::Int = 40_000,
+        water_opacity::Float64 = 0.08,
+        sphere_size::Float64 = 2.6,
+        height::Int = 720,
+        play_ms::Int = 700,
+        file::Union{Nothing,AbstractString} = nothing)
+
+    seeds = collect(seeds)
+    isempty(seeds) && error("`seeds` must be non-empty")
+
+    # --- pre-sample every episode -----------------------------------------
+    episodes = map(seeds) do s
+        ep  = sample_phantom_config(rpcfg; rng_seed = s)
+        obj = build_phantom(ep.cfg)
+        s_idx, w_idx = _episode_groups(obj, ep.cfg, max_sphere_points, max_water_points)
+        (; ep, obj, s_idx, w_idx)
+    end
+
+    # Shared colour range across all episodes so colours mean the same thing.
+    sphere_cvals = reduce(vcat, [getproperty(e.obj, color_by)[e.s_idx] for e in episodes];
+                          init = Float64[])
+    cmin, cmax = isempty(sphere_cvals) ? (0.0, 1.0) : extrema(sphere_cvals)
+
+    titlefor(e) = _explorer_title(e.ep.truth.episode_seed,
+        length(e.ep.cfg.custom_sphere_descriptors), e.ep.cfg.rotation)
+
+    # --- base traces (first episode) + one frame per episode --------------
+    w0, s0 = _explorer_traces(episodes[1].obj, episodes[1].s_idx, episodes[1].w_idx,
+                              color_by, water_opacity, sphere_size)
+    traces = PlotlyJS.GenericTrace[w0, s0]
+
+    frames = PlotlyJS.PlotlyFrame[]
+    for (i, e) in enumerate(episodes)
+        w, s = _explorer_traces(e.obj, e.s_idx, e.w_idx, color_by, water_opacity, sphere_size)
+        push!(frames, PlotlyJS.frame(name = string(i), data = [w, s], traces = [0, 1],
+            layout = PlotlyJS.attr(title = PlotlyJS.attr(text = titlefor(e)))))
+    end
+
+    # --- slider (one step per episode) + Play/Pause -----------------------
+    anim_opts(dur) = PlotlyJS.attr(mode = "immediate", fromcurrent = true,
+        frame = PlotlyJS.attr(duration = dur, redraw = true),
+        transition = PlotlyJS.attr(duration = 0))
+    steps = [PlotlyJS.attr(label = string(seeds[i]), method = "animate",
+                args = [[string(i)], anim_opts(0)]) for i in eachindex(episodes)]
+    slider = PlotlyJS.attr(active = 0, x = 0.0, y = -0.02, len = 1.0,
+        pad = PlotlyJS.attr(t = 30, b = 10),
+        currentvalue = PlotlyJS.attr(prefix = "episode (seed): ", visible = true),
+        steps = steps)
+    playmenu = PlotlyJS.attr(type = "buttons", direction = "left", showactive = false,
+        x = 0.0, y = 1.08, xanchor = "left", yanchor = "top",
+        pad = PlotlyJS.attr(t = 4, r = 8),
+        buttons = [
+            PlotlyJS.attr(label = "▶ Resample", method = "animate",
+                args = [nothing, anim_opts(play_ms)]),
+            PlotlyJS.attr(label = "⏸ Pause", method = "animate",
+                args = [[nothing], anim_opts(0)])])
+
+    layout = PlotlyJS.Layout(height = height,
+        title = PlotlyJS.attr(text = titlefor(episodes[1]), x = 0.5, xanchor = "center",
+                              y = 0.98, yanchor = "top"),
+        margin = PlotlyJS.attr(t = 110, b = 110, l = 10, r = 10),
+        scene = PlotlyJS.attr(aspectmode = "data"),
+        coloraxis = PlotlyJS.attr(colorscale = "Viridis", cmin = cmin, cmax = cmax,
+            colorbar = PlotlyJS.attr(title = PlotlyJS.attr(text = String(color_by),
+                                                           side = "right"))),
+        legend = PlotlyJS.attr(x = 1.0, y = 1.0, xanchor = "right", yanchor = "top"),
+        updatemenus = [playmenu], sliders = [slider])
+
+    fig = PlotlyJS.plot(traces, layout, frames)
     file !== nothing && PlotlyJS.savefig(fig, file; format = "html")
     fig
 end
