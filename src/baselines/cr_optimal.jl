@@ -1,10 +1,10 @@
 # Cramér–Rao optimal fixed-block schedule for the F1+ forward model.
-# E2_5_PLAN.md §4. Solves
+# Solves
 #
 #   argmin_{(TI_k, TR_k)_{k=1..n}}  Σ_j σ²_T1_j(schedule) / T1_j²
 #   s.t.  Σ_k block_time(TR_k) ≤ budget_s
 #          0.01 ≤ TI_k ≤ 3.0
-#          max(TI_k + 0.05, 0.5) ≤ TR_k ≤ 5.0
+#          max((TI_k + TE_s)/TR_headroom, TR_lo_floor) ≤ TR_k ≤ TR_hi
 #
 # where σ²_T1_j = [(J_j^T J_j)⁻¹]_{T1, T1} from the F1+ forward model evaluated
 # at the truth (T1_j, A_j = 1).
@@ -34,6 +34,20 @@ Total scan time for a vector of TR values, Npe shots each.
 """
 schedule_time_s(TRs::AbstractVector, Npe::Int; kw...) =
     sum(block_time_s(TR, Npe; kw...) for TR in TRs)
+
+"""
+    minimum_tr_s(TI; TE_s = 0.0, TR_headroom = 1.0, TR_lo_floor = 0.0)
+
+Generic lower bound for a block TR. `TR_headroom < 1` reserves a fraction of TR
+outside the requested `TI + TE_s` interval; `TR_lo_floor` is a caller-specified
+protocol/action-space floor.
+"""
+@inline function minimum_tr_s(TI::Real; TE_s::Real = 0.0,
+                              TR_headroom::Real = 1.0,
+                              TR_lo_floor::Real = 0.0)
+    TR_headroom > 0 || throw(ArgumentError("TR_headroom must be positive"))
+    return max(Float64(TR_lo_floor), (Float64(TI) + Float64(TE_s)) / Float64(TR_headroom))
+end
 
 # ── F1+ forward and its Jacobian (finite-difference) ──────────────────────────
 
@@ -127,7 +141,8 @@ end
 """
     sample_random_schedule(rng, n_blocks; budget_s, Npe,
                             TI_lo = 0.01, TI_hi = 3.0,
-                            TR_lo_floor = 0.5, TR_hi = 5.0)
+                            TR_lo_floor = 0.0, TR_hi = 5.0,
+                            TE_s = 0.0, TR_headroom = 1.0)
 
 Sample one random schedule that respects the budget. Re-samples up to 100 times
 if the first draw exceeds budget. Returns `nothing` if no valid sample found.
@@ -135,12 +150,16 @@ if the first draw exceeds budget. Returns `nothing` if no valid sample found.
 function sample_random_schedule(rng::AbstractRNG, n_blocks::Int;
                                   budget_s::Real, Npe::Int,
                                   TI_lo::Real = 0.01, TI_hi::Real = 3.0,
-                                  TR_lo_floor::Real = 0.5, TR_hi::Real = 5.0)
+                                  TR_lo_floor::Real = 0.0, TR_hi::Real = 5.0,
+                                  TE_s::Real = 0.0,
+                                  TR_headroom::Real = 1.0)
     for _ in 1:100
         TIs = exp.(log(TI_lo) .+ (log(TI_hi) - log(TI_lo)) .* rand(rng, n_blocks))
         TRs = similar(TIs)
         @inbounds for k in 1:n_blocks
-            lo = max(TIs[k] + 0.05, TR_lo_floor)
+            lo = minimum_tr_s(TIs[k]; TE_s = TE_s,
+                              TR_headroom = TR_headroom,
+                              TR_lo_floor = TR_lo_floor)
             TRs[k] = exp(log(lo) + (log(TR_hi) - log(lo)) * rand(rng))
         end
         if schedule_time_s(TRs, Npe) ≤ budget_s
@@ -164,7 +183,9 @@ function refine_coordinate_descent(TIs::AbstractVector, TRs::AbstractVector,
                                      n_iter::Int = 50,
                                      step_factor::Real = 1.3,
                                      TI_lo::Real = 0.01, TI_hi::Real = 3.0,
-                                     TR_lo_floor::Real = 0.5, TR_hi::Real = 5.0)
+                                     TR_lo_floor::Real = 0.0, TR_hi::Real = 5.0,
+                                     TE_s::Real = 0.0,
+                                     TR_headroom::Real = 1.0)
     TIs = collect(Float64, TIs)
     TRs = collect(Float64, TRs)
     L_best = cr_fleet_objective(T1s, TIs, TRs; Npe = Npe)
@@ -176,7 +197,9 @@ function refine_coordinate_descent(TIs::AbstractVector, TRs::AbstractVector,
             for f in factors
                 # Try perturbing TI[k]
                 new_TI = clamp(TIs[k] * f, TI_lo, TI_hi)
-                new_TR_lo = max(new_TI + 0.05, TR_lo_floor)
+                new_TR_lo = minimum_tr_s(new_TI; TE_s = TE_s,
+                                         TR_headroom = TR_headroom,
+                                         TR_lo_floor = TR_lo_floor)
                 new_TR = clamp(TRs[k], new_TR_lo, TR_hi)
                 # Save and apply
                 old_TI, old_TR = TIs[k], TRs[k]
@@ -194,7 +217,11 @@ function refine_coordinate_descent(TIs::AbstractVector, TRs::AbstractVector,
                 end
 
                 # Try perturbing TR[k]
-                new_TR2 = clamp(TRs[k] * f, max(TIs[k] + 0.05, TR_lo_floor), TR_hi)
+                new_TR2 = clamp(TRs[k] * f,
+                                minimum_tr_s(TIs[k]; TE_s = TE_s,
+                                             TR_headroom = TR_headroom,
+                                             TR_lo_floor = TR_lo_floor),
+                                TR_hi)
                 old_TR2 = TRs[k]
                 TRs[k] = new_TR2
                 if schedule_time_s(TRs, Npe) > budget_s
@@ -224,11 +251,16 @@ Returns NamedTuple `(TIs, TRs, L)` of the best schedule found.
 """
 function cr_optimize(T1s::AbstractVector; n_blocks::Int, budget_s::Real,
                        Npe::Int = 8, n_starts::Int = 1000, n_refine::Int = 10,
-                       rng::AbstractRNG = MersenneTwister(0))
+                       rng::AbstractRNG = MersenneTwister(0),
+                       TR_lo_floor::Real = 0.0,
+                       TE_s::Real = 0.0,
+                       TR_headroom::Real = 1.0)
     # Phase 1: random sampling
     candidates = Tuple{Vector{Float64}, Vector{Float64}, Float64}[]
     for _ in 1:n_starts
-        s = sample_random_schedule(rng, n_blocks; budget_s = budget_s, Npe = Npe)
+        s = sample_random_schedule(rng, n_blocks; budget_s = budget_s, Npe = Npe,
+                                   TR_lo_floor = TR_lo_floor,
+                                   TE_s = TE_s, TR_headroom = TR_headroom)
         s === nothing && continue
         TIs, TRs = s
         L = cr_fleet_objective(T1s, TIs, TRs; Npe = Npe)
@@ -246,7 +278,9 @@ function cr_optimize(T1s::AbstractVector; n_blocks::Int, budget_s::Real,
     best_L   = top[1][3]
     for (TIs0, TRs0, _) in top
         TIs_r, TRs_r, L_r = refine_coordinate_descent(
-            TIs0, TRs0, T1s; Npe = Npe, budget_s = budget_s)
+            TIs0, TRs0, T1s; Npe = Npe, budget_s = budget_s,
+            TR_lo_floor = TR_lo_floor,
+            TE_s = TE_s, TR_headroom = TR_headroom)
         if L_r < best_L
             best_L = L_r
             best_TIs = TIs_r

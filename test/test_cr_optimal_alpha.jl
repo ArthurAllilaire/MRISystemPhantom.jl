@@ -89,6 +89,37 @@ const _refine_alpha = MRISystemPhantom.refine_coordinate_descent_alpha
         @test all(αlo - 1e-9 .<= r.αs .<= αhi + 1e-9)
     end
 
+    @testset "CR schedules respect caller-supplied TR feasibility" begin
+        tr_floor = 0.5
+        te_s = 0.020
+        headroom = 0.90
+        r = cr_optimize([1.3, 0.45, 0.9]; n_blocks = 4, budget_s = 240.0,
+                        Npe = 32, n_starts = 40, n_refine = 2,
+                        rng = MersenneTwister(11),
+                        TR_lo_floor = tr_floor, TE_s = te_s,
+                        TR_headroom = headroom)
+        @test length(r.TIs) == 4
+        @test all(r.TRs .>= [MRISystemPhantom.minimum_tr_s(TI;
+                                                           TR_lo_floor = tr_floor,
+                                                           TE_s = te_s,
+                                                           TR_headroom = headroom)
+                              for TI in r.TIs] .- 1e-10)
+        @test schedule_time_s(r.TRs, 32) ≤ 240.0 + 1e-10
+
+        ra = cr_optimize_alpha([1.3, 0.45, 0.9]; n_blocks = 4, budget_s = 240.0,
+                               Npe = 32, n_starts = 40, n_refine = 2,
+                               rng = MersenneTwister(12),
+                               TR_lo_floor = tr_floor, TE_s = te_s,
+                               TR_headroom = headroom)
+        @test length(ra.TIs) == 4
+        @test all(ra.TRs .>= [MRISystemPhantom.minimum_tr_s(TI;
+                                                            TR_lo_floor = tr_floor,
+                                                            TE_s = te_s,
+                                                            TR_headroom = headroom)
+                               for TI in ra.TIs] .- 1e-10)
+        @test schedule_time_s(ra.TRs, 32) ≤ 240.0 + 1e-10
+    end
+
     @testset "single-sphere: report optimized α vs Ernst (informative)" begin
         # Not a hard Ernst assertion — the CRLB-optimal α for T1 *estimation* is
         # related to but not identical to the SNR Ernst angle. We assert the

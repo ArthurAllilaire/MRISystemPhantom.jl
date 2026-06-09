@@ -123,14 +123,18 @@ Sample one budget-feasible (TI, TR, α) schedule. TI/TR sampled as in
 function sample_random_schedule_alpha(rng::AbstractRNG, n_blocks::Int;
                                       budget_s::Real, Npe::Int,
                                       TI_lo::Real = 0.01, TI_hi::Real = 3.0,
-                                      TR_lo_floor::Real = 0.5, TR_hi::Real = 5.0,
+                                      TR_lo_floor::Real = 0.0, TR_hi::Real = 5.0,
+                                      TE_s::Real = 0.0,
+                                      TR_headroom::Real = 1.0,
                                       α_lo::Real = deg2rad(5.0),
                                       α_hi::Real = deg2rad(90.0))
     for _ in 1:100
         TIs = exp.(log(TI_lo) .+ (log(TI_hi) - log(TI_lo)) .* rand(rng, n_blocks))
         TRs = similar(TIs)
         @inbounds for k in 1:n_blocks
-            lo = max(TIs[k] + 0.05, TR_lo_floor)
+            lo = minimum_tr_s(TIs[k]; TE_s = TE_s,
+                              TR_headroom = TR_headroom,
+                              TR_lo_floor = TR_lo_floor)
             TRs[k] = exp(log(lo) + (log(TR_hi) - log(lo)) * rand(rng))
         end
         if schedule_time_s(TRs, Npe) ≤ budget_s
@@ -154,7 +158,9 @@ function refine_coordinate_descent_alpha(TIs::AbstractVector, TRs::AbstractVecto
                                          n_iter::Int = 50,
                                          step_factor::Real = 1.3,
                                          TI_lo::Real = 0.01, TI_hi::Real = 3.0,
-                                         TR_lo_floor::Real = 0.5, TR_hi::Real = 5.0,
+                                         TR_lo_floor::Real = 0.0, TR_hi::Real = 5.0,
+                                         TE_s::Real = 0.0,
+                                         TR_headroom::Real = 1.0,
                                          α_lo::Real = deg2rad(5.0),
                                          α_hi::Real = deg2rad(90.0))
     TIs = collect(Float64, TIs)
@@ -170,7 +176,9 @@ function refine_coordinate_descent_alpha(TIs::AbstractVector, TRs::AbstractVecto
             for f in factors
                 # Perturb TI[k]
                 new_TI = clamp(TIs[k] * f, TI_lo, TI_hi)
-                new_TR_lo = max(new_TI + 0.05, TR_lo_floor)
+                new_TR_lo = minimum_tr_s(new_TI; TE_s = TE_s,
+                                         TR_headroom = TR_headroom,
+                                         TR_lo_floor = TR_lo_floor)
                 new_TR = clamp(TRs[k], new_TR_lo, TR_hi)
                 old_TI, old_TR = TIs[k], TRs[k]
                 TIs[k], TRs[k] = new_TI, new_TR
@@ -186,7 +194,11 @@ function refine_coordinate_descent_alpha(TIs::AbstractVector, TRs::AbstractVecto
                 end
 
                 # Perturb TR[k]
-                new_TR2 = clamp(TRs[k] * f, max(TIs[k] + 0.05, TR_lo_floor), TR_hi)
+                new_TR2 = clamp(TRs[k] * f,
+                                minimum_tr_s(TIs[k]; TE_s = TE_s,
+                                             TR_headroom = TR_headroom,
+                                             TR_lo_floor = TR_lo_floor),
+                                TR_hi)
                 old_TR2 = TRs[k]
                 TRs[k] = new_TR2
                 if schedule_time_s(TRs, Npe) > budget_s
@@ -230,13 +242,20 @@ Returns `(TIs, TRs, αs, L)`.
 function cr_optimize_alpha(T1s::AbstractVector; n_blocks::Int, budget_s::Real,
                            Npe::Int = 8, n_starts::Int = 1000, n_refine::Int = 10,
                            rng::AbstractRNG = MersenneTwister(0),
+                           TR_lo_floor::Real = 0.0,
+                           TE_s::Real = 0.0,
+                           TR_headroom::Real = 1.0,
                            α_bounds::Tuple{<:Real,<:Real} = (deg2rad(5.0),
                                                              deg2rad(90.0)))
     α_lo, α_hi = Float64(α_bounds[1]), Float64(α_bounds[2])
     candidates = Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, Float64}[]
     for _ in 1:n_starts
         s = sample_random_schedule_alpha(rng, n_blocks; budget_s = budget_s,
-                                         Npe = Npe, α_lo = α_lo, α_hi = α_hi)
+                                         Npe = Npe,
+                                         TR_lo_floor = TR_lo_floor,
+                                         TE_s = TE_s,
+                                         TR_headroom = TR_headroom,
+                                         α_lo = α_lo, α_hi = α_hi)
         s === nothing && continue
         TIs, TRs, αs = s
         L = cr_fleet_objective_alpha(T1s, TIs, TRs, αs; Npe = Npe)
@@ -251,6 +270,8 @@ function cr_optimize_alpha(T1s::AbstractVector; n_blocks::Int, budget_s::Real,
     for (TIs0, TRs0, αs0, _) in top
         TIs_r, TRs_r, αs_r, L_r = refine_coordinate_descent_alpha(
             TIs0, TRs0, αs0, T1s; Npe = Npe, budget_s = budget_s,
+            TR_lo_floor = TR_lo_floor,
+            TE_s = TE_s, TR_headroom = TR_headroom,
             α_lo = α_lo, α_hi = α_hi)
         if L_r < best_L
             best_L, best_TIs, best_TRs, best_αs = L_r, TIs_r, TRs_r, αs_r
