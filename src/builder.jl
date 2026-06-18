@@ -60,6 +60,23 @@ function transform_descriptors(descs::AbstractVector{<:SphereDescriptor},
     [transform_descriptor(d, R, translation) for d in descs]
 end
 
+"""
+    imaged_descriptors(descs, cfg)         -> Vector{SphereDescriptor}
+    imaged_descriptors(plate::Symbol, cfg) -> Vector{SphereDescriptor}
+
+Sphere descriptors in the **image frame**: `descs` (or plate `plate`'s nominal
+descriptors) with `cfg`'s pose applied — the exact rotation + translation
+`build_phantom` bakes into the voxelised phantom. Use these for ROI placement
+(`sphere_descriptor_pixels`) and for reading ground-truth values, so callers
+never re-implement the pose / `mm→m` conversion. For a sampled random phantom,
+pass `truth.descriptors_sampled[plate]` as `descs` (the pre-pose sampled spheres).
+"""
+imaged_descriptors(descs::AbstractVector{<:SphereDescriptor}, cfg::PhantomConfig) =
+    transform_descriptors(descs, cfg.rotation, cfg.translation_mm .* MM_TO_M)
+
+imaged_descriptors(plate::Symbol, cfg::PhantomConfig) =
+    imaged_descriptors(sphere_descriptors(plate, cfg), cfg)
+
 function _t1_table(field::Symbol, class::Symbol)
     class === :legacy ? T1_ARRAY_LEGACY[field] : T1_ARRAY[field]
 end
