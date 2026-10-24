@@ -9,9 +9,9 @@ const T1_ARRAY = Dict(
 "T2 companion values (s) for each T1-plate sphere at 1.5 T and 3 T. Paired with [`T1_ARRAY`](@ref)."
 const T2_OF_T1_ARRAY = Dict(
     :T15 => [1.542, 1.196, 0.8717, 0.6461, 0.4575, 0.3353, 0.2384, 0.1706,
-             0.1216, 0.0837, 0.0592, 0.0426, 0.0304, 0.0213],
+             0.1216, 0.0837, 0.0591, 0.0426, 0.0304, 0.0213],
     :T3  => [1.354, 1.035, 0.7283, 0.5244, 0.3686, 0.2667, 0.1893, 0.1341,
-             0.0938, 0.0657, 0.0468, 0.03315, 0.02369, 0.01673],
+             0.0938, 0.0657, 0.0468, 0.03311, 0.02369, 0.01673],
 )
 
 "T1 values (s) for serial class 0001–0041 (legacy recipe). Substantially different from [`T1_ARRAY`](@ref) — use the correct class for your phantom serial number."
