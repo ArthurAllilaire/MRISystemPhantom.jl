@@ -1,9 +1,9 @@
-"T2 values (s) for the 14 MnCl₂ T2-plate spheres at 1.5 T and 3 T. Serial class ≥ 0042."
+"T2 values (s) for the 14 MnCl₂ T2-plate spheres at 1.5 T and 3 T. Serial class ≥ 0042. Source: QalibreMD Model 130 manual, Table 1."
 const T2_ARRAY = Dict(
-    :T15 => [2.640, 2.292, 1.923, 1.609, 1.245, 1.004, 0.7829, 0.5331,
-             0.4005, 0.2610, 0.1898, 0.1547, 0.1002, 0.07965],
-    :T3  => [2.756, 2.281, 1.961, 1.552, 1.341, 1.017, 0.7821, 0.5897,
-             0.4436, 0.3148, 0.2374, 0.1701, 0.1238, 0.0869],
+    :T15 => [1.044, 0.6239, 0.4283, 0.2584, 0.1861, 0.1370, 0.08952, 0.06282,
+             0.04384, 0.02728, 0.01924, 0.01544, 0.01005, 0.00779],
+    :T3  => [0.6458, 0.4236, 0.2860, 0.1848, 0.1341, 0.09440, 0.06251, 0.04498,
+             0.03095, 0.02010, 0.01540, 0.01085, 0.00759, 0.00535],
 )
 "T1 companion values (s) for each T2-plate sphere at 1.5 T and 3 T. Paired with [`T2_ARRAY`](@ref)."
 const T1_OF_T2_ARRAY = Dict(
